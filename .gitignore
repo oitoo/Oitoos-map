@@ -1,0 +1,40 @@
+# ==========================================
+# 🔒 1. PRIVACITAT I VARIABLES D'ENTORN
+# ==========================================
+.env
+*.env
+
+# ==========================================
+# 🛑 2. MOTOR I EINES D'ADMINISTRACIÓ LOCAL (PYTHON / FLASK)
+# ==========================================
+app.py
+config.py
+generator/
+src/
+templates/
+tools/
+MEMORIA_ESTRATEGICA.md
+estat_projecte.md
+estructura_clean*.txt
+
+# ==========================================
+# 📂 3. DADES PRIVADES / EN CURS D'EDICIÓ
+# ==========================================
+dades/pendents/
+pendents/
+tracks_originals/
+
+# Memòria cau de grafs d'Overpass (.pkl pesats)
+generator/graph_cache/
+*.pkl
+
+# ==========================================
+# 💻 4. SISTEMA OPERATIU, IDE I ENTORNS VIRTUALS
+# ==========================================
+__pycache__/
+*.pyc
+.venv/
+venv/
+.vscode/
+.DS_Store
+Thumbs.db

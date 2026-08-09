@@ -949,7 +949,13 @@ function configurarEines() {
         
         const radi = esEdicio ? 1500 : 500; 
         const query = `[out:json][timeout:25]; (way(around:${radi},${lat},${lon});); out body; >; out skel qt;`;
-        const dades = await fetch("[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)", { method: "POST", body: "data=" + encodeURIComponent(query), headers: { "Content-Type": "application/x-www-form-urlencoded" } }).then(r=>r.json()).catch(()=>null);
+        
+        // URL Corregida (sense parèntesis ni correus Markdown)
+        const dades = await fetch("https://overpass-api.de/api/interpreter", { 
+            method: "POST", 
+            body: "data=" + encodeURIComponent(query), 
+            headers: { "Content-Type": "application/x-www-form-urlencoded" } 
+        }).then(r => r.json()).catch(() => null);
         
         map.closePopup(popup);
         if (!dades || dades.elements.length === 0) return;
@@ -959,7 +965,7 @@ function configurarEines() {
         
         dades.elements.forEach(via => {
             if (via.type === 'way') {
-                const coords = via.nodes.map(id => nodesMap[id]).filter(c=>c);
+                const coords = via.nodes.map(id => nodesMap[id]).filter(c => c);
                 const linia = L.polyline(coords, { color: esEdicio ? '#f59e0b' : '#3b82f6', weight: 4 }).addTo(capaInspeccioLupa);
 
                 let htmlPopup = `<b>${via.tags?.name || 'Via/Carretera'} (ID: ${via.id})</b>`;
