@@ -120,7 +120,6 @@ function loadCategory(category) {
 
     showLoading(`Carregant rutes de ${category}...`);
 
-    // Ruta corregida a static/json_publics/
     fetch(`static/json_publics/${category}.json`)
         .then(response => {
             if (!response.ok) throw new Error("Fitxer no trobat");
@@ -128,11 +127,10 @@ function loadCategory(category) {
         })
         .then(tracks => {
             tracks.forEach(track => {
-                // Admet tant 'coords' (JSON públic) com 'points' (JSON intern)
                 const punts = track.coords || track.points;
                 if (!punts || !punts.length) return;
 
-                // Processa coordenades adaptant-se a qualsevol format
+                // Converteix i descarrega coordenades (siguin enters x100.000 o decimals convencionals)
                 const latLngs = punts.map(p => {
                     let lat, lon;
 
@@ -146,7 +144,7 @@ function loadCategory(category) {
                         return null;
                     }
 
-                    // Admet formats de coordenades integer/comprimit (p. ex. lat * 100000)
+                    // Descompressió si la coordenada està multiplicada per 100.000
                     if (Math.abs(lat) > 180) lat /= 100000;
                     if (Math.abs(lon) > 180) lon /= 100000;
 
@@ -168,7 +166,6 @@ function loadCategory(category) {
                     line.addTo(map);
                 }
 
-                // Esdeveniment de selecció en fer clic a la ruta
                 line.on("click", (e) => {
                     L.DomEvent.stopPropagation(e);
                     activeLine = line;
@@ -182,7 +179,6 @@ function loadCategory(category) {
             hideLoading();
             updateVisibility();
 
-            // Sincronitza i reajusta la vista del mapa per mostrar totes les rutes
             const visibleLines = allLines.filter(l => map.hasLayer(l));
             if (visibleLines.length > 0) {
                 const group = L.featureGroup(visibleLines);
@@ -197,14 +193,12 @@ function loadCategory(category) {
 
 // --- ESDEVENIMENTS ---
 
-// Deseleccionar ruta en fer clic a qualsevol punt buit del mapa
 map.on("click", () => {
     activeLine = null;
     updateInfo(null);
     applyStyles();
 });
 
-// Escoltar els canvis dels filtres (checkboxes)
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#filters input[type='checkbox']").forEach(cb => {
         cb.addEventListener("change", (e) => {
