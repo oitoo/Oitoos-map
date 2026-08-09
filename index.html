@@ -1,273 +1,65 @@
 <!DOCTYPE html>
-<html>
-    <script src="tracks.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
+<html lang="ca">
 <head>
-  <title>My Tracks Map</title>
-
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoRoute - El meu diari de viatges</title>
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
-    body {
-      margin: 0;
-      padding: 0;
+    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    #map { width: 100vw; height: 100vh; }
+
+    /* Indicator de Càrrega */
+    #loading {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 10000; background: rgba(255, 255, 255, 0.95); padding: 8px 16px;
+      border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 13px; font-weight: 500; display: none;
     }
 
-    #controls {
-      position: absolute;
-      top: 10px;
-      left: 50px;
-      z-index: 9999;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-
+    /* Caixa d'Informació de la Ruta */
     #info {
-      position: absolute;
-      top: 10px;
-      left: 140px;
-      z-index: 9999;
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      width: fit-content;
+      position: fixed; top: 15px; left: 60px; z-index: 9999;
+      background: rgba(255, 255, 255, 0.95); padding: 12px 16px; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15); min-width: 200px;
     }
+    #title { font-weight: 700; font-size: 15px; color: #2c3e50; }
+    #meta { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
 
-    #map {
-      width: 100%;
-      height: 100vh;
+    /* Filtres Desplegables */
+    #filters {
+      position: fixed; top: 15px; right: 15px; z-index: 10000;
+      background: rgba(255, 255, 255, 0.95); border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15); padding: 10px 14px;
+      display: flex; flex-direction: column; gap: 8px; font-size: 13px;
     }
+    #filters label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; }
+    #filters input { cursor: pointer; accent-color: #3498db; }
+
+    .leaflet-interactive { transition: opacity 0.25s ease, stroke-width 0.25s ease; }
   </style>
 </head>
-
 <body>
 
-<div id="controls">
-  <label><input type="checkbox" id="walk" checked> walk</label><br>
-  <label><input type="checkbox" id="cycle" checked> cycle</label><br>
-  <label><input type="checkbox" id="land" checked> land</label><br>
-  <label><input type="checkbox" id="boat" checked> boat</label><br>
-  <label><input type="checkbox" id="plane" checked> plane</label>
-</div>
+  <div id="loading">Carregant...</div>
 
-<div id="info">
-  <strong>No route selected</strong>
-</div>
+  <div id="info">
+    <div id="title">Fes clic en una ruta</div>
+    <div id="meta"></div>
+  </div>
 
-<div id="map"></div>
+  <div id="filters">
+    <label><input type="checkbox" value="walk"> 🥾 Caminant</label>
+    <label><input type="checkbox" value="cycle"> 🚲 Bicicleta</label>
+    <label><input type="checkbox" value="train"> 🚆 Tren</label>
+    <label><input type="checkbox" value="land"> 🚗 Terra / Cotxe</label>
+  </div>
 
-<!-- Leaflet -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <div id="map"></div>
 
-<!-- GPX Plugin -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.7.0/gpx.min.js"></script>
-
-<script>
-
-  // Create map
-  const map = L.map('map').setView([20, 0], 2);
-
-  const groups = {
-  walk: L.layerGroup().addTo(map),
-  cycle: L.layerGroup().addTo(map),
-  land: L.layerGroup().addTo(map),
-  boat: L.layerGroup().addTo(map),
-  plane: L.layerGroup().addTo(map)
-  };
-  
-  const allLayers = [];
-  // Map background
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-const trackIndex = [];
-
-tracks.forEach(filePath => {
-
-  // Remove "tracks/" prefix if it exists
-  const cleanPath = filePath.replace("tracks/", "");
-
-  // Get folder name (walking / cycling / hiking)
-  const category = cleanPath.split("/")[0].toLowerCase();
-
-   trackIndex.push({
-    filePath,
-    category,
-    loaded: false,
-    layer: null,
-    name: cleanPath.split("/").pop()
-  });
-
-});
-
-function loadCategory(category) {
-
-  trackIndex.forEach(item => {
-
-    if (item.category !== category) return;
-    if (item.loaded) return;
-
-  // Assign color automatically
-  let color = "red";
-
-  if (category === "walk") color = "green";
-  if (category === "cycle") color = "orange";
-  if (category === "land") color = "gray";
-  if (category === "boat") color = "blue";
-  if (category === "plane") color = "yellow";
-
-
-  const layer = new L.GPX(item.filePath, {
-
-    async: true,
-
-    polyline_options: {
-      color: color,
-      weight: 3,
-      opacity: 0.8
-    },
-
-    marker_options: {
-      startIconUrl: null,
-      endIconUrl: null,
-      shadowUrl: null,
-      wptIconUrls: {
-    '': null
-      }
-    }
-  });
-
-    groups[category].addLayer(layer);
-
-    item.layer = layer;
-    layer.trackInfo = item;
-    item.loaded = true;
-    // IMPORTANT: store for click + reset system
-    allLayers.push(layer);
-    
-    layer.on("loaded", function () {
-      layer.on("click", function (e) {
-        L.DomEvent.stopPropagation(e);
-        focusRoute(layer);
-      });
-    });
-  });
-}
-
-function updateVisibility() {
-
-  const states = {
-    walk: document.getElementById("walk").checked,
-    cycle: document.getElementById("cycle").checked,
-    land: document.getElementById("land").checked,
-    boat: document.getElementById("boat").checked,
-    plane: document.getElementById("plane").checked
-  };
-
-  Object.keys(states).forEach(cat => {
-
-    if (states[cat]) {
-      loadCategory(cat);
-      map.addLayer(groups[cat]);
-    } else {
-      map.removeLayer(groups[cat]);
-    }
-
-  });
-}
-
-let activeLayer = null;
-
-function focusRoute(layer) {
-
-  if (activeLayer === layer) {
-    resetFocus();
-    return;
-  }
-
-  resetFocus();
-
-  activeLayer = layer;
-  const info = layer.trackInfo;
-  
-  // Get actual GPX activity date
-  const startTime = layer.get_start_time();
-  
-  let dateText = "Unknown date";
-  
-  if (startTime) {
-    dateText = new Date(startTime).toLocaleDateString();
-  }
-  
-  document.getElementById("info").innerHTML = `
-    ${dateText} <strong>${info.name.replace(".gpx", "")}</strong>
-  `;
-
-  layer.eachLayer?.(sub => {
-    if (sub.setStyle) {
-      sub.setStyle({
-        weight: 6,
-        opacity: 1
-      });
-    }
-  });
-
-  allLayers.forEach(l => {
-    if (l !== layer) {
-      l.eachLayer?.(sub => {
-        if (sub.setStyle) {
-          sub.setStyle({ weight: 2, opacity: 0.4 });
-        }
-      });
-    }
-  });
-
-  try {
-    map.fitBounds(layer.getBounds(), { padding: [20, 20] });
-  } catch (e) {}
-}
-
-function resetFocus() {
-
-  allLayers.forEach(l => {
-    l.eachLayer?.(sub => {
-      if (sub.setStyle) {
-        sub.setStyle({
-          opacity: 0.8,
-          weight: 3
-        });
-      }
-    });
-  });
-
-  activeLayer = null;
-}
-
-map.on("click", function () {
-  resetFocus();
-});
-
-document.getElementById("walk").addEventListener("change", updateVisibility);
-document.getElementById("cycle").addEventListener("change", updateVisibility);
-document.getElementById("land").addEventListener("change", updateVisibility);
-document.getElementById("boat").addEventListener("change", updateVisibility);
-document.getElementById("plane").addEventListener("change", updateVisibility);
-
-setTimeout(updateVisibility, 300);
-
-</script>
-
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="static/js/viewer.js"></script>
 </body>
 </html>
