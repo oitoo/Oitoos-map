@@ -1,6 +1,6 @@
 /**
  * GEOROUTE VIEWER (Web Pública Estàtica)
- * Només lectura. Carrega les rutes des de dades/json_publics/ i les dibuixa a Leaflet.
+ * Només lectura. Carrega les rutes des de static/json_publics/ i les dibuixa a Leaflet.
  */
 
 // 1. Inicialització del Mapa
@@ -120,17 +120,20 @@ function loadCategory(category) {
 
     showLoading(`Carregant rutes de ${category}...`);
 
-    fetch(`dades/json_publics/${category}.json`)
+    // Ruta corregida a static/json_publics/
+    fetch(`static/json_publics/${category}.json`)
         .then(response => {
             if (!response.ok) throw new Error("Fitxer no trobat");
             return response.json();
         })
         .then(tracks => {
             tracks.forEach(track => {
-                if (!track.points || !track.points.length) return;
+                // Admet tant 'coords' (JSON públic) com 'points' (JSON intern)
+                const punts = track.coords || track.points;
+                if (!punts || !punts.length) return;
 
                 // Processa coordenades adaptant-se a qualsevol format
-                const latLngs = track.points.map(p => {
+                const latLngs = punts.map(p => {
                     let lat, lon;
 
                     if (Array.isArray(p)) {
