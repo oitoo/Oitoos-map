@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoRoute Studio - Validador i Visualitzador de Rutes</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        #map { height: calc(100vh - 64px); }
+        .sidebar { height: calc(100vh - 64px); overflow-y: auto; }
+        
+        #boto-lupa.actiu { background-color: #fbbf24; border-color: #f59e0b; color: #111827; box-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+        #boto-mode-mapa.actiu { background-color: #10b981; border-color: #059669; }
+        
+        .mode-inspeccio { cursor: crosshair !important; }
+        .lupa-popup .leaflet-popup-content-wrapper { background-color: #1f2937; color: #f3f4f6; border: 1px solid #374151; }
+        .lupa-popup .leaflet-popup-tip { background-color: #1f2937; }
+        
+        .punt-arrossegable { cursor: grab; transition: background-color 0.2s; }
+        .punt-arrossegable:active { cursor: grabbing; }
+        .punt-desactivat { opacity: 0.5; text-decoration: line-through; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased overflow-hidden">
+
+    <!-- Dades injectades per Flask/Server -->
+    <script id="flask-coords" type="application/json">{{ coords_originals|tojson if coords_originals else [] }}</script>
+    <script id="flask-segments" type="application/json">{{ segments|tojson if segments else [] }}</script>
+    <script id="flask-estacions" type="application/json">{{ estacions_oficials|tojson if estacions_oficials else [] }}</script>
+
+    <!-- CAPÇALERA -->
+    <header class="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6 shadow-md z-30 relative">
+        <div class="flex items-center space-x-3">
+            <span class="text-2xl">🗺️</span>
+            <h1 class="text-xl font-bold tracking-wide text-emerald-400">GeoRoute Studio</h1>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <!-- BOTÓ MODE MAPA / VERIFICACIÓ -->
+            <button id="boto-mode-mapa" onclick="window.toggleModeMapa()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition duration-200 shadow border border-indigo-500 flex items-center gap-1.5 cursor-pointer">
+                <span id="icona-boto-mapa">🗺️</span> <span id="text-boto-mapa">Mapa</span>
+            </button>
+
+            <!-- BOTÓ NOVA RUTA (Visible només en Mode Verificació/Edició) -->
+            <button id="boto-nova-ruta" onclick="obrirCreacioRuta()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition duration-200 shadow border border-blue-500 flex items-center gap-1.5 cursor-pointer">
+                <span>✨</span> <span>Nova ruta</span>
+            </button>
+
+            <!-- BOTÓ PUBLICAR A GITHUB (Visible només en Mode Mapa) -->
+            <button id="boto-publicar-github" onclick="window.publicarAGitHub()" class="hidden bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-medium text-xs py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow border border-gray-600 cursor-pointer">
+                <span>🚀</span> <span id="text-boto-publicar">Publicar a GitHub</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTINGUT PRINCIPAL -->
+    <main id="main-container" class="grid grid-cols-1 lg:grid-cols-4 gap-0 relative">
+        
+        <!-- PANELL LATERAL (Sidebar) -->
+        <div id="sidebar" class="sidebar col-span-1 bg-gray-800 p-6 border-r border-gray-700 flex flex-col justify-between space-y-6 z-20 shadow-xl {% if not fitxers_pendents %}hidden{% endif %}">
+            
+            <!-- MODE 1: VERIFICACIÓ DE RUTA -->
+            <div id="seccio-verificacio" class="space-y-6">
+                <div class="border-b border-gray-700 pb-3 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                        <span>✅</span> <span>Verificació de Ruta</span>
+                    </h3>
+                    <button onclick="canviarModeBarraLateral('EDICIO')" class="text-xs bg-gray-700 hover:bg-gray-600 text-indigo-300 px-2 py-1 rounded transition cursor-pointer">
+                        ✏️ Editar
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Selecció d'Arxiu Pendent</label>
+                    <select id="select-gpx" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-emerald-500" onchange="if(this.value) location.href='/carregar_pendent/' + this.value">
+                        {% if fitxers_pendents %}
+                            {% for f in fitxers_pendents %}
+                                <option value="{{ f }}" {% if f == gpx_filename %}selected{% endif %}>{{ f }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">Cap fitxer pendent</option>
+                        {% endif %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Títol de la Ruta</label>
+                    <input type="text" id="nom-ruta" value="{{ nom_ruta if nom_ruta else '' }}" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Data de la Ruta</label>
+                    <input type="date" id="data-ruta" value="{{ data_avui }}" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Mode de Transport</label>
+                    <select id="select-mode-transport" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                        <option value="walk" {% if mode_detectat == 'walk' or mode_detectat == 'caminant' %}selected{% endif %}>🥾 Caminant (walk)</option>
+                        <option value="cycle" {% if mode_detectat == 'cycle' or mode_detectat == 'bicicleta' %}selected{% endif %}>🚲 Ciclisme (cycle)</option>
+                        <option value="land" {% if mode_detectat == 'land' or mode_detectat == 'cotxe' %}selected{% endif %}>🚗 Motor (land)</option>
+                        <option value="train" {% if mode_detectat == 'train' or mode_detectat == 'tren' %}selected{% endif %}>🚆 Tren (train)</option>
+                        <option value="boat" {% if mode_detectat == 'boat' or mode_detectat == 'vaixell' %}selected{% endif %}>🔵 Barca (boat)</option>
+                        <option value="plane" {% if mode_detectat == 'plane' or mode_detectat == 'avio' %}selected{% endif %}>🟡 Avió (plane)</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 border-t border-gray-700">
+                    <button onclick="verificarIDesar()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded text-sm transition duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer">
+                        <span>✅</span> <span>Verificar Ruta</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- MODE 2: EDICIÓ DE RUTA -->
+            <div id="seccio-edicio" class="space-y-6 hidden">
+                <div class="border-b border-gray-700 pb-3 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                        <span>✏️</span> <span>Edició de Ruta</span>
+                    </h3>
+                    <button onclick="canviarModeBarraLateral('VERIFICACIO')" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded transition cursor-pointer">
+                        ⬅️ Tornar
+                    </button>
+                </div>
+
+                <div>
+                    <button id="boto-lupa" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-3 rounded text-xs transition duration-200 shadow border border-gray-600 flex items-center justify-center space-x-2 cursor-pointer">
+                        <span>🔍</span> <span id="lupa-text">Activar Lupa d'Inspecció</span>
+                    </button>
+                </div>
+
+                <div class="bg-gray-900/80 p-4 rounded-lg border border-indigo-600/50 space-y-3">
+                    <h4 class="font-bold text-indigo-400 uppercase tracking-tight text-[10px] flex items-center space-x-2">
+                        <span>📍</span> <span>Seqüència de Ruta (Arrossega per ordenar)</span>
+                    </h4>
+                    <div id="llista-punts" class="text-xs text-gray-300 space-y-1 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="bg-gray-900/80 p-4 rounded-lg border border-purple-600/50 space-y-3">
+                    <h4 class="font-bold text-purple-400 uppercase tracking-tight text-[10px] flex items-center space-x-2">
+                        <span>🔀</span> <span>Switches Manuals</span>
+                    </h4>
+                    <div id="llista-switches" class="text-xs text-gray-300 space-y-1"></div>
+                </div>
+
+                <div class="bg-gray-900/80 p-4 rounded-lg border border-amber-600/50 space-y-3">
+                    <h4 class="font-bold text-amber-400 uppercase tracking-tight text-[10px] flex items-center space-x-2">
+                        <span>⛔</span> <span>Vies Bloquejades</span>
+                    </h4>
+                    <div id="llista-bloquejades" class="text-xs text-gray-300 space-y-1"></div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-gray-700">
+                    <button id="boto-recalcular" onclick="recalcularRutaEditada()" class="w-full hidden bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded text-xs transition duration-200 shadow cursor-pointer">
+                        ⚡ Recalcular
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="desferCanvis()" class="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-2 px-3 rounded text-xs transition duration-200 flex items-center justify-center gap-1 cursor-pointer">
+                            <span>↩️</span> <span>Desfer</span>
+                        </button>
+                        <button onclick="acceptarEdicio()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded text-xs transition duration-200 flex items-center justify-center gap-1 cursor-pointer">
+                            <span>💾</span> <span>Acceptar</span>
+                        </button>
+                    </div>
+
+                    <p id="estat-recalcul" class="text-[10px] text-amber-400 italic hidden text-center">Calculant al servidor, espera...</p>
+                </div>
+            </div>
+
+            <div class="text-[10px] text-gray-500 border-t border-gray-700/50 pt-2 text-center">
+                GeoRoute Studio v2.0
+            </div>
+        </div>
+
+        <!-- CONTENIDOR DEL MAPA -->
+        <div id="map-container" class="col-span-1 {% if fitxers_pendents %}lg:col-span-3{% else %}lg:col-span-4{% endif %} relative">
+            <div id="map" class="z-10 shadow-inner bg-gray-950"></div>
+
+            <!-- PANELL FLOTANT DE FILTRES (Mode Mapa) -->
+            <div id="panell-filtres-mapa" class="hidden absolute top-4 right-4 z-[1000] bg-gray-800/95 text-white p-3 rounded-xl shadow-xl backdrop-blur-md border border-gray-700 flex flex-col gap-2 text-xs min-w-[180px]">
+                <span class="font-bold border-b border-gray-600 pb-1 text-gray-300">Filtres de Categoria</span>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-green-400">
+                    <input type="checkbox" value="walk" checked class="filtre-categoria accent-green-500"> 🟢 Walk (Caminant)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-orange-400">
+                    <input type="checkbox" value="cycle" checked class="filtre-categoria accent-orange-500"> 🟠 Cycle (Ciclisme)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-red-400">
+                    <input type="checkbox" value="land" checked class="filtre-categoria accent-red-500"> 🔴 Land (Motor)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-purple-400">
+                    <input type="checkbox" value="train" checked class="filtre-categoria accent-purple-500"> 🟣 Train (Tren)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-blue-400">
+                    <input type="checkbox" value="boat" checked class="filtre-categoria accent-blue-500"> 🔵 Boat (Barca)
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer hover:text-yellow-400">
+                    <input type="checkbox" value="plane" checked class="filtre-categoria accent-yellow-500"> 🟡 Plane (Avió)
+                </label>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/map_studio.js"></script>
+</body>
+</html>
