@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
-    /* Assegura alçada i amplada completa sense barres de desplaçament */
     html, body {
       margin: 0;
       padding: 0;
@@ -22,7 +21,7 @@
     #map {
       width: 100%;
       height: 100%;
-      background-color: #121212; /* Fons fosc de seguretat mentre carrega */
+      background-color: #e5e3df;
     }
 
     /* Indicador de càrrega */
@@ -32,7 +31,7 @@
       left: 50%; 
       transform: translateX(-50%);
       z-index: 10000; 
-      background: rgba(255, 255, 255, 0.95); 
+      background: rgba(255, 255, 255, 0.9); 
       padding: 8px 16px;
       border-radius: 20px; 
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -47,30 +46,76 @@
       top: 15px; 
       left: 60px; 
       z-index: 9999;
-      background: rgba(255, 255, 255, 0.95); 
+      background: rgba(255, 255, 255, 0.85); 
+      backdrop-filter: blur(8px);
       padding: 12px 16px; 
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
       min-width: 200px;
     }
     #title { font-weight: 700; font-size: 15px; color: #2c3e50; }
     #meta { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
 
-    /* Filtres i llegenda de capes */
-    #filters {
-      position: fixed; 
-      top: 15px; 
-      right: 15px; 
+    /* CONTENIDOR FLOTANT DE FILTRES I BOTÓ */
+    #filters-wrapper {
+      position: fixed;
+      top: 15px;
+      right: 15px;
       z-index: 10000;
-      background: rgba(255, 255, 255, 0.95); 
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
-      padding: 12px 16px;
-      display: flex; 
-      flex-direction: column; 
-      gap: 8px; 
-      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
     }
+
+    /* Botó petit transparent (20% opacitat per defecte) */
+    #toggle-filters {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(6px);
+      opacity: 0.2; /* 20% de transparència quan està inactiu */
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #1e293b;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    #toggle-filters:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.95);
+      transform: scale(1.05);
+    }
+
+    /* Panell de filtres translúcid */
+    #filters {
+      margin-top: 8px;
+      background: rgba(255, 255, 255, 0.7); /* Més transparent */
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+      transform-origin: top right;
+    }
+
+    /* Estats de desplegat / plegat */
+    #filters.collapsed {
+      opacity: 0;
+      transform: scale(0.85) translateY(-10px);
+      pointer-events: none;
+      visibility: hidden;
+    }
+
     #filters label { 
       display: flex; 
       align-items: center; 
@@ -94,29 +139,41 @@
     <div id="meta"></div>
   </div>
 
-  <!-- Panell de filtres i llegenda de capes -->
-  <div id="filters">
-    <label style="color: #16a34a;">
-      <input type="checkbox" value="walk" checked style="accent-color: #16a34a;"> Caminant
-    </label>
-    <label style="color: #f97316;">
-      <input type="checkbox" value="cycle" checked style="accent-color: #f97316;"> Ciclisme
-    </label>
-    <label style="color: #d97706;">
-      <input type="checkbox" value="bus" checked style="accent-color: #d97706;"> Autobús
-    </label>
-    <label style="color: #dc2626;">
-      <input type="checkbox" value="land" checked style="accent-color: #dc2626;"> Cotxe
-    </label>
-    <label style="color: #c026d3;">
-      <input type="checkbox" value="train" checked style="accent-color: #c026d3;"> Tren
-    </label>
-    <label style="color: #0284c7;">
-      <input type="checkbox" value="boat" checked style="accent-color: #0284c7;"> Barca
-    </label>
-    <label style="color: #4f46e5;">
-      <input type="checkbox" value="plane" checked style="accent-color: #4f46e5;"> Avió
-    </label>
+  <!-- Contenidor de capes / filtres -->
+  <div id="filters-wrapper">
+    <!-- Botó petit sense text (només icona de capes) -->
+    <button id="toggle-filters" title="Filtres i llegenda" aria-label="Filtres">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/>
+        <path d="m22 12.5-8.58 3.91a2 2 0 0 1-1.66 0L3 12.5"/>
+        <path d="m22 17.5-8.58 3.91a2 2 0 0 1-1.66 0L3 17.5"/>
+      </svg>
+    </button>
+
+    <!-- Panell de filtres (tots desmarcats per defecte) -->
+    <div id="filters">
+      <label style="color: #16a34a;">
+        <input type="checkbox" value="walk" style="accent-color: #16a34a;"> Caminant
+      </label>
+      <label style="color: #ea580c;">
+        <input type="checkbox" value="cycle" style="accent-color: #ea580c;"> Ciclisme
+      </label>
+      <label style="color: #d97706;">
+        <input type="checkbox" value="bus" style="accent-color: #d97706;"> Autobús
+      </label>
+      <label style="color: #dc2626;">
+        <input type="checkbox" value="land" style="accent-color: #dc2626;"> Cotxe
+      </label>
+      <label style="color: #c026d3;">
+        <input type="checkbox" value="train" style="accent-color: #c026d3;"> Tren
+      </label>
+      <label style="color: #0284c7;">
+        <input type="checkbox" value="boat" style="accent-color: #0284c7;"> Barca
+      </label>
+      <label style="color: #4f46e5;">
+        <input type="checkbox" value="plane" style="accent-color: #4f46e5;"> Avió
+      </label>
+    </div>
   </div>
 
   <div id="map"></div>
