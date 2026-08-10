@@ -11,9 +11,9 @@ const map = L.map("map", {
 });
 
 // Capa base fosca / CartoDB Dark Matter
-L.tileLayer('https://{s}[.basemaps.cartocdn.com/dark_all/](https://.basemaps.cartocdn.com/dark_all/){z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="[https://www.openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)">OpenStreetMap</a> &copy; <a href="[https://carto.com/](https://carto.com/)">CARTO</a>'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
 }).addTo(map);
 
 // Estat global
@@ -21,19 +21,23 @@ let activeLine = null;
 const allLines = [];
 const loadedCategories = {};
 
-// Configuració de la paleta de colors per categoria
-const CATEGORY_COLORS = {
-    walk: "#22c55e",     // Verd
-    cycle: "#f97316",    // Taronja
-    train: "#a855f7",    // Púrpura
-    land: "#ef4444",     // Vermell
-    boat: "#3b82f6",     // Blau
-    plane: "#eab308"     // Groc
+// Configuració d'estils visuals per categoria
+const CATEGORY_STYLES = {
+    walk:  { color: "#16a34a", weight: 2.5, dashArray: "3, 6" },   // Verd - Puntejada fina
+    cycle: { color: "#f97316", weight: 3,   dashArray: "8, 6" },   // Taronja - Discontínua fina
+    bus:   { color: "#d97706", weight: 4,   dashArray: null },     // Groc Àmbar - Contínua
+    land:  { color: "#dc2626", weight: 4,   dashArray: null },     // Vermell - Contínua (Cotxe)
+    cotxe: { color: "#dc2626", weight: 4,   dashArray: null },
+    car:   { color: "#dc2626", weight: 4,   dashArray: null },
+    train: { color: "#c026d3", weight: 5,   dashArray: null },     // Magenta - Contínua gruixuda
+    boat:  { color: "#0284c7", weight: 3,   dashArray: "10, 8" },  // Blau Marí - Discontínua
+    plane: { color: "#4f46e5", weight: 3,   dashArray: "16, 10" }  // Índigo - Traç llarg
 };
 
 const categoryState = {
     walk: false,
     cycle: false,
+    bus: false,
     train: false,
     land: false,
     boat: false,
@@ -81,10 +85,6 @@ function formatDate(dateStr) {
     return d.toLocaleDateString("ca-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-function getColor(cat) {
-    return CATEGORY_COLORS[cat] || "#95a5a6";
-}
-
 function showLoading(text) {
     const el = document.getElementById("loading");
     if (el) {
@@ -118,15 +118,18 @@ function applyStyles() {
     allLines.forEach(l => {
         if (!map.hasLayer(l)) return;
 
+        const cat = l._track.category;
+        const style = CATEGORY_STYLES[cat] || { weight: 3 };
+
         if (!activeLine) {
-            l.setStyle({ opacity: 0.7, weight: 3 });
+            l.setStyle({ opacity: 0.85, weight: style.weight });
             return;
         }
 
         if (l === activeLine) {
-            l.setStyle({ opacity: 1, weight: 6 });
+            l.setStyle({ opacity: 1, weight: style.weight + 2 });
         } else {
-            l.setStyle({ opacity: 0.2, weight: 2 });
+            l.setStyle({ opacity: 0.25, weight: Math.max(1.5, style.weight - 1) });
         }
     });
 }
@@ -152,7 +155,6 @@ function loadCategory(category) {
 
     showLoading(`S'estan carregant les rutes de ${category}...`);
 
-    // Ruta relativa compatible amb GitHub Pages i Flask
     const jsonPath = `./static/json_publics/${category}.json`;
 
     fetch(jsonPath)
@@ -189,10 +191,13 @@ function loadCategory(category) {
 
                 if (latLngs.length === 0) return;
 
+                const style = CATEGORY_STYLES[category] || { color: "#95a5a6", weight: 3, dashArray: null };
+
                 const line = L.polyline(latLngs, {
-                    color: getColor(category),
-                    weight: 3,
-                    opacity: 0.7
+                    color: style.color,
+                    weight: style.weight,
+                    dashArray: style.dashArray,
+                    opacity: 0.85
                 });
 
                 line._track = { ...track, category };

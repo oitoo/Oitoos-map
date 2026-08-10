@@ -28,15 +28,23 @@
     #title { font-weight: 700; font-size: 15px; color: #2c3e50; }
     #meta { font-size: 12px; color: #7f8c8d; margin-top: 4px; }
 
-    /* Filtres desplegables */
+    /* Filtres i llegenda de capes */
     #filters {
       position: fixed; top: 15px; right: 15px; z-index: 10000;
       background: rgba(255, 255, 255, 0.95); border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.15); padding: 10px 14px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15); padding: 12px 16px;
       display: flex; flex-direction: column; gap: 8px; font-size: 13px;
     }
-    #filters label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500; }
-    #filters input { cursor: pointer; accent-color: #3498db; }
+    #filters label { 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      cursor: pointer; 
+      font-weight: 600; 
+      transition: opacity 0.2s ease;
+    }
+    #filters label:hover { opacity: 0.75; }
+    #filters input { cursor: pointer; }
 
     .leaflet-interactive { transition: opacity 0.25s ease, stroke-width 0.25s ease; }
   </style>
@@ -50,11 +58,29 @@
     <div id="meta"></div>
   </div>
 
+  <!-- Panell de filtres acolorit amb la nova paleta normalitzada -->
   <div id="filters">
-    <label><input type="checkbox" value="walk"> 🥾 Caminant</label>
-    <label><input type="checkbox" value="cycle"> 🚲 Bicicleta</label>
-    <label><input type="checkbox" value="train"> 🚆 Tren</label>
-    <label><input type="checkbox" value="land"> 🚗 Terra / Cotxe</label>
+    <label style="color: #16a34a;">
+      <input type="checkbox" value="walk" checked style="accent-color: #16a34a;"> Caminant
+    </label>
+    <label style="color: #f97316;">
+      <input type="checkbox" value="cycle" checked style="accent-color: #f97316;"> Ciclisme
+    </label>
+    <label style="color: #d97706;">
+      <input type="checkbox" value="bus" checked style="accent-color: #d97706;"> Autobús
+    </label>
+    <label style="color: #dc2626;">
+      <input type="checkbox" value="land" checked style="accent-color: #dc2626;"> Cotxe
+    </label>
+    <label style="color: #c026d3;">
+      <input type="checkbox" value="train" checked style="accent-color: #c026d3;"> Tren
+    </label>
+    <label style="color: #0284c7;">
+      <input type="checkbox" value="boat" checked style="accent-color: #0284c7;"> Barca
+    </label>
+    <label style="color: #4f46e5;">
+      <input type="checkbox" value="plane" checked style="accent-color: #4f46e5;"> Avió
+    </label>
   </div>
 
   <div id="map"></div>

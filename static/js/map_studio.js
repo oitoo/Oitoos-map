@@ -52,16 +52,20 @@ window.modeTransportActual = 'train';
 // -------------------------------------------------------------------------
 // MAPA D'ESTILS I MÒDULS DE TRANSPORT (INCLOU BUS I COTXE/MOTOR)
 // -------------------------------------------------------------------------
-const COLORS_CATEGORIA = {
-    'walk': '#22c55e',      // Verd
-    'cycle': '#f97316',     // Taronja
-    'bus': '#06b6d4',       // Cian / Blau turquesa
-    'land': '#ef4444',      // Vermell (Cotxe / Motor)
-    'cotxe': '#ef4444',     // Àlies per a Cotxe
-    'train': '#a855f7',     // Púrpura (Tren)
-    'boat': '#3b82f6',      // Blau
-    'plane': '#eab308'      // Groc
+const ESTILS_CATEGORIA = {
+    'walk':  { color: '#16a34a', weight: 2.5, dashArray: '3, 6' },
+    'cycle': { color: '#f97316', weight: 3,   dashArray: '8, 6' },
+    'bus':   { color: '#d97706', weight: 4,   dashArray: null },
+    'land':  { color: '#dc2626', weight: 4,   dashArray: null },
+    'train': { color: '#c026d3', weight: 5,   dashArray: null },
+    'boat':  { color: '#0284c7', weight: 3,   dashArray: '10, 8' },
+    'plane': { color: '#4f46e5', weight: 3,   dashArray: '16, 10' }
 };
+
+// Generar COLORS_CATEGORIA dinàmicament per mantenir la compatibilitat
+const COLORS_CATEGORIA = Object.fromEntries(
+    Object.entries(ESTILS_CATEGORIA).map(([k, v]) => [k, v.color])
+);
 
 const MODULS_TRANSPORT = {
     'walk': { nom: 'A peu', icona: '🥾', script: 'route_walk' },
@@ -282,15 +286,13 @@ function filtrarIAnimarRutesMapa() {
             }
 
             if (coords.length > 0) {
-                const color = COLORS_CATEGORIA[cat] || COLORS_CATEGORIA['land'];
-                const opacitat = cat === 'bus' ? 0.85 : 0.8;
-                const dashArray = cat === 'bus' ? '6, 4' : null;
+                const estil = ESTILS_CATEGORIA[cat] || ESTILS_CATEGORIA['land'];
 
                 const poly = L.polyline(coords, {
-                    color: color,
-                    weight: 4,
-                    opacity: opacitat,
-                    dashArray: dashArray
+                    color: estil.color,
+                    weight: estil.weight,
+                    opacity: 0.8,
+                    dashArray: estil.dashArray
                 }).addTo(capesRutesMapa);
 
                 const modInfo = MODULS_TRANSPORT[cat] || { nom: cat, icona: '📍' };
@@ -299,7 +301,7 @@ function filtrarIAnimarRutesMapa() {
                     <div class="p-1 space-y-2">
                         <h4 class="font-bold text-sm text-white">${modInfo.icona} ${escapeHtml(ruta.title || ruta.name || 'Ruta sense nom')}</h4>
                         <p class="text-xs text-gray-400">📅 Data: ${escapeHtml(ruta.date || 'Sense data')}</p>
-                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${color}; font-weight:bold;">${escapeHtml(modInfo.nom.toUpperCase())}</span></p>
+                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${estil.color}; font-weight:bold;">${escapeHtml(modInfo.nom.toUpperCase())}</span></p>
                         <button onclick="window.desverificarRuta('${escapeHtml(ruta.id || ruta.filename)}')" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-1 px-2 rounded text-xs transition mt-2 cursor-pointer">
                             ⚠️ Desverificar / Tornar a pendents
                         </button>
