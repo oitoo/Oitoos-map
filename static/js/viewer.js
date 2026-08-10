@@ -9,16 +9,18 @@ const map = L.map("map", {
     zoomControl: true
 });
 
-// 1. Capa de fons: Relleu i ombrejat de muntanyes (Esri Hillshade)
+// 1. Capa de fons: Relleu Esri
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19,
+    maxZoom: 21,         // Zoom màxim permès a la pantalla
+    maxNativeZoom: 16,   // A partir de zoom 16, estira la imatge en lloc de demanar-ne de noves
     attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TNM'
 }).addTo(map);
 
-// 2. Capa superior: Carreteres, ciutats i noms llatins (CARTO Positron translúcid)
+// 2. Capa superior: Noms i vies (CARTO)
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    opacity: 0.7, // Permet veure el relleu del fons a través del mapa gris
+    maxZoom: 21,
+    maxNativeZoom: 19,   // CARTO arriba molt ben definit fins a nivell 19
+    opacity: 0.7,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }).addTo(map);
 
