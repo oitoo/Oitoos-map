@@ -144,9 +144,9 @@ function loadCategory(category) {
                         return null;
                     }
 
-                    // Descompressió si la coordenada està multiplicada per 100.000
-                    if (Math.abs(lat) > 180) lat /= 100000;
-                    if (Math.abs(lon) > 180) lon /= 100000;
+                    // Conversió segura: si la coordenada és un enter, la dividim per 100.000
+                    if (Number.isInteger(lat)) lat /= 100000;
+                    if (Number.isInteger(lon)) lon /= 100000;
 
                     return [lat, lon];
                 }).filter(coord => coord !== null);
