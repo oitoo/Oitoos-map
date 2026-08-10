@@ -34,10 +34,8 @@ let dadesRutesCarregades = [];
 
 let draggedItemIdx = null; 
 
-// Mode de transport actiu per defecte
-window.modeTransportActual = 'tren';
+window.modeTransportActual = 'train';
 
-// Colors per categoria al Mode Mapa
 const COLORS_CATEGORIA = {
     'walk': '#22c55e',   // Verd
     'cycle': '#f97316',  // Taronja
@@ -47,7 +45,6 @@ const COLORS_CATEGORIA = {
     'plane': '#eab308'   // Groc
 };
 
-// Mapa de mòduls i executables de transport
 const MODULS_TRANSPORT = {
     'walk': { nom: 'A peu', icona: '🥾', script: 'route_walk' },
     'cycle': { nom: 'Bicicleta', icona: '🚲', script: 'route_bike' },
@@ -164,7 +161,6 @@ window.toggleModeMapa = function() {
         }
         panellFiltres.classList.remove('hidden');
 
-        // Intercanvi de botons a la capçalera
         if (botoNovaRuta) botoNovaRuta.classList.add('hidden');
         if (botoPublicar) botoPublicar.classList.remove('hidden');
 
@@ -196,7 +192,6 @@ window.toggleModeMapa = function() {
         }
         panellFiltres.classList.add('hidden');
 
-        // Intercanvi de botons a la capçalera
         if (botoNovaRuta) botoNovaRuta.classList.remove('hidden');
         if (botoPublicar) botoPublicar.classList.add('hidden');
 
@@ -921,7 +916,7 @@ window.verificarIDesar = async function() {
 };
 
 // ==========================================
-// EINES DEL MAPA (LUPA D'INSPECCIÓ)
+// EINES DEL MAPA (LUPA D'INSPECCIÓ OVERPASS)
 // ==========================================
 function configurarEines() {
     const botoLupa = document.getElementById('boto-lupa');
@@ -950,15 +945,14 @@ function configurarEines() {
         const radi = esEdicio ? 1500 : 500; 
         const query = `[out:json][timeout:25]; (way(around:${radi},${lat},${lon});); out body; >; out skel qt;`;
         
-        // URL Corregida (sense parèntesis ni correus Markdown)
-        const dades = await fetch("https://overpass-api.de/api/interpreter", { 
+        const dades = await fetch("[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)", { 
             method: "POST", 
             body: "data=" + encodeURIComponent(query), 
             headers: { "Content-Type": "application/x-www-form-urlencoded" } 
         }).then(r => r.json()).catch(() => null);
         
         map.closePopup(popup);
-        if (!dades || dades.elements.length === 0) return;
+        if (!dades || !dades.elements || dades.elements.length === 0) return;
         
         const nodesMap = {};
         dades.elements.forEach(el => { if(el.type === 'node') nodesMap[el.id] = [el.lat, el.lon]; });
@@ -966,6 +960,8 @@ function configurarEines() {
         dades.elements.forEach(via => {
             if (via.type === 'way') {
                 const coords = via.nodes.map(id => nodesMap[id]).filter(c => c);
+                if (!coords.length) return;
+
                 const linia = L.polyline(coords, { color: esEdicio ? '#f59e0b' : '#3b82f6', weight: 4 }).addTo(capaInspeccioLupa);
 
                 let htmlPopup = `<b>${via.tags?.name || 'Via/Carretera'} (ID: ${via.id})</b>`;

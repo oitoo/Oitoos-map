@@ -3,16 +3,17 @@
  * Només lectura. Carrega les rutes des de static/json_publics/ i les dibuixa a Leaflet.
  */
 
-// 1. Inicialització del Mapa
+// 1. Inicialització del Mapa Base
 const map = L.map("map", {
-    center: [20, 0],
-    zoom: 2,
+    center: [41.72, 1.82],
+    zoom: 8,
     zoomControl: true
 });
 
-// Capa Base OpenStreetMap
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+// Capa Base fosca / CartoDB Dark Matter
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
 }).addTo(map);
 
 // Estat global
@@ -22,15 +23,14 @@ const loadedCategories = {};
 
 // Configuració de la paleta de colors per categoria
 const CATEGORY_COLORS = {
-    walk: "#2ecc71",     // Verd
-    cycle: "#f39c12",    // Taronja
-    train: "#9b59b6",    // Lila
-    land: "#e74c3c",     // Vermell
-    boat: "#3498db",     // Blau
-    plane: "#f1c40f"     // Groc
+    walk: "#22c55e",     // Verd
+    cycle: "#f97316",    // Taronja
+    train: "#a855f7",    // Purpura
+    land: "#ef4444",     // Vermell
+    boat: "#3b82f6",     // Blau
+    plane: "#eab308"     // Groc
 };
 
-// Mode/Estat dels filtres
 const categoryState = {
     walk: false,
     cycle: false,
@@ -39,6 +39,38 @@ const categoryState = {
     boat: false,
     plane: false
 };
+
+// --- DESCODIFICADOR DE POLYLINE COMPRIMIDA (GOOGLE) ---
+function decodePolyline(encoded) {
+    if (!encoded) return [];
+    let points = [];
+    let index = 0, len = encoded.length;
+    let lat = 0, lng = 0;
+
+    while (index < len) {
+        let b, shift = 0, result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += dlat;
+
+        shift = 0;
+        result = 0;
+        do {
+            b = encoded.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+        } while (b >= 0x20);
+        let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += dlng;
+
+        points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+}
 
 // --- UTILITATS ---
 
@@ -76,7 +108,7 @@ function updateInfo(track) {
         return;
     }
 
-    if (titleEl) titleEl.innerText = track.name || "Ruta sense nom";
+    if (titleEl) titleEl.innerText = track.name || track.title || "Ruta sense nom";
     if (metaEl) metaEl.innerText = `${track.category ? track.category.toUpperCase() : ''} • ${formatDate(track.date)}`;
 }
 
@@ -87,7 +119,7 @@ function applyStyles() {
         if (!map.hasLayer(l)) return;
 
         if (!activeLine) {
-            l.setStyle({ opacity: 0.6, weight: 3 });
+            l.setStyle({ opacity: 0.7, weight: 3 });
             return;
         }
 
@@ -110,7 +142,7 @@ function updateVisibility() {
     });
 }
 
-// --- CARREGADOR DE CATEGORIES ---
+// --- CARREGADOR DE CATEGORIES DES DE STATIC/JSON_PUBLICS ---
 
 function loadCategory(category) {
     if (loadedCategories[category]) {
@@ -120,43 +152,47 @@ function loadCategory(category) {
 
     showLoading(`Carregant rutes de ${category}...`);
 
-    fetch(`static/json_publics/${category}.json`)
+    // Ruta relativa compatible amb GitHub Pages i Flask
+    const jsonPath = `./static/json_publics/${category}.json`;
+
+    fetch(jsonPath)
         .then(response => {
-            if (!response.ok) throw new Error("Fitxer no trobat");
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         })
         .then(tracks => {
             tracks.forEach(track => {
-                const punts = track.coords || track.points;
-                if (!punts || !punts.length) return;
+                let latLngs = [];
 
-                // Converteix i descarrega coordenades (siguin enters x100.000 o decimals convencionals)
-                const latLngs = punts.map(p => {
-                    let lat, lon;
+                if (track.polyline) {
+                    latLngs = decodePolyline(track.polyline);
+                } else {
+                    const punts = track.coords || track.points;
+                    if (!punts || !punts.length) return;
 
-                    if (Array.isArray(p)) {
-                        lat = p[0];
-                        lon = p[1];
-                    } else if (p && p.coords && Array.isArray(p.coords)) {
-                        lat = p.coords[0];
-                        lon = p.coords[1];
-                    } else {
-                        return null;
-                    }
+                    latLngs = punts.map(p => {
+                        let lat, lon;
+                        if (Array.isArray(p)) {
+                            lat = p[0]; lon = p[1];
+                        } else if (p && p.coords && Array.isArray(p.coords)) {
+                            lat = p.coords[0]; lon = p.coords[1];
+                        } else {
+                            return null;
+                        }
 
-                    // Conversió segura: si la coordenada és un enter, la dividim per 100.000
-                    if (Number.isInteger(lat)) lat /= 100000;
-                    if (Number.isInteger(lon)) lon /= 100000;
+                        if (Number.isInteger(lat)) lat /= 100000;
+                        if (Number.isInteger(lon)) lon /= 100000;
 
-                    return [lat, lon];
-                }).filter(coord => coord !== null);
+                        return [lat, lon];
+                    }).filter(c => c !== null);
+                }
 
                 if (latLngs.length === 0) return;
 
                 const line = L.polyline(latLngs, {
                     color: getColor(category),
                     weight: 3,
-                    opacity: 0.6
+                    opacity: 0.7
                 });
 
                 line._track = { ...track, category };
