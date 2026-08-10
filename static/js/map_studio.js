@@ -36,23 +36,42 @@ let draggedItemIdx = null;
 
 window.modeTransportActual = 'train';
 
+// -------------------------------------------------------------------------
+// MAPA D'ESTILS I MODULS DE TRANSPORT (INCLOU BUS I COTXE/LAND)
+// -------------------------------------------------------------------------
 const COLORS_CATEGORIA = {
-    'walk': '#22c55e',   // Verd
-    'cycle': '#f97316',  // Taronja
-    'land': '#ef4444',   // Vermell
-    'train': '#a855f7',  // Purpura
-    'boat': '#3b82f6',   // Blau
-    'plane': '#eab308'   // Groc
+    'walk': '#22c55e',      // Verd
+    'cycle': '#f97316',     // Taronja
+    'bus': '#06b6d4',       // Cian / Blau Turquesa
+    'land': '#ef4444',      // Vermell (Cotxe / Motor)
+    'cotxe': '#ef4444',     // Àlies per Cotxe
+    'train': '#a855f7',     // Púrpura (Tren)
+    'boat': '#3b82f6',      // Blau
+    'plane': '#eab308'      // Groc
 };
 
 const MODULS_TRANSPORT = {
     'walk': { nom: 'A peu', icona: '🥾', script: 'route_walk' },
     'cycle': { nom: 'Bicicleta', icona: '🚲', script: 'route_bike' },
+    'bus': { nom: 'Autobús', icona: '🚌', script: 'route_bus' },
     'land': { nom: 'Cotxe/Motor', icona: '🚗', script: 'route_car' },
     'train': { nom: 'Tren', icona: '🚆', script: 'route_train' },
     'boat': { nom: 'Barca', icona: '🚢', script: 'route_ship' },
     'plane': { nom: 'Avió', icona: '✈️', script: 'route_plane' }
 };
+
+function normalitzarMode(mode) {
+    if (!mode) return 'land';
+    const m = String(mode).toLowerCase().trim();
+    if (m === 'cotxe' || m === 'car' || m === 'land' || m === 'motor') return 'land';
+    if (m === 'bus' || m === 'autobus' || m === 'autobús') return 'bus';
+    if (m === 'caminant' || m === 'walk' || m === 'peu') return 'walk';
+    if (m === 'bicicleta' || m === 'cycle' || m === 'bici') return 'cycle';
+    if (m === 'tren' || m === 'train') return 'train';
+    if (m === 'boat' || m === 'vaixell' || m === 'barca') return 'boat';
+    if (m === 'plane' || m === 'avio' || m === 'avió') return 'plane';
+    return m;
+}
 
 // ==========================================
 // DESCODIFICADOR DE POLYLINE (GOOGLE)
@@ -132,7 +151,7 @@ function dibuixarTrazatRuta(coords, segments) {
 }
 
 // ==========================================
-// MODE MAPA I FILTRES FLOTANTS
+// MODE MAPA I FILTRES FLOTANTS (CARREGA BUS I COTXE)
 // ==========================================
 window.toggleModeMapa = function() {
     const sidebar = document.getElementById('sidebar');
@@ -232,10 +251,12 @@ function filtrarIAnimarRutesMapa() {
     capesRutesMapa.clearLayers();
 
     const categoriesActives = Array.from(document.querySelectorAll('.filtre-categoria:checked'))
-        .map(c => c.value);
+        .map(c => normalitzarMode(c.value));
 
     dadesRutesCarregades.forEach(ruta => {
-        const cat = ruta.category || ruta.mode || 'land';
+        const rawCat = ruta.category || ruta.mode || 'land';
+        const cat = normalitzarMode(rawCat);
+
         if (categoriesActives.includes(cat)) {
             let coords = [];
             
@@ -243,21 +264,29 @@ function filtrarIAnimarRutesMapa() {
                 coords = decodePolyline(ruta.polyline);
             } else if (ruta.coords) {
                 coords = ruta.coords;
+            } else if (ruta.geometria) {
+                coords = ruta.geometria;
             }
 
             if (coords.length > 0) {
-                const color = COLORS_CATEGORIA[cat] || '#ffffff';
+                const color = COLORS_CATEGORIA[cat] || COLORS_CATEGORIA['land'];
+                const opacitat = cat === 'bus' ? 0.85 : 0.8;
+                const dashArray = cat === 'bus' ? '6, 4' : null;
+
                 const poly = L.polyline(coords, {
                     color: color,
                     weight: 4,
-                    opacity: 0.8
+                    opacity: opacitat,
+                    dashArray: dashArray
                 }).addTo(capesRutesMapa);
+
+                const modInfo = MODULS_TRANSPORT[cat] || { nom: cat, icona: '📍' };
 
                 const popupHtml = `
                     <div class="p-1 space-y-2">
-                        <h4 class="font-bold text-sm text-white">${ruta.title || ruta.name || 'Ruta sense nom'}</h4>
+                        <h4 class="font-bold text-sm text-white">${modInfo.icona} ${ruta.title || ruta.name || 'Ruta sense nom'}</h4>
                         <p class="text-xs text-gray-400">📅 Data: ${ruta.date || 'Sense data'}</p>
-                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${color};">${cat.toUpperCase()}</span></p>
+                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${color}; font-weight:bold;">${modInfo.nom.toUpperCase()}</span></p>
                         <button onclick="window.desverificarRuta('${ruta.id || ruta.filename}')" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-1 px-2 rounded text-xs transition mt-2 cursor-pointer">
                             ⚠️ Desverificar / Tornar a pendents
                         </button>
