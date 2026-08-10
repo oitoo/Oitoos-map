@@ -1,18 +1,17 @@
 /**
- * GEOROUTE VIEWER (Web pública estàtica)
+ * GEOROUTE VIEWER (Web pública estàtica - Mode Clar & Auto-hide)
  */
 
-// 1. Inicialització del mapa base (URL de CARTO simplificada)
+// 1. Inicialització del mapa base amb només alfabet llatí (Esri)
 const map = L.map("map", {
     center: [41.72, 1.82],
     zoom: 8,
     zoomControl: true
 });
 
-// Capa base clara
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 16,
-    attribution: 'Tiles &copy; Esri'
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
 }).addTo(map);
 
 // Estat global
@@ -20,10 +19,9 @@ let activeLine = null;
 const allLines = [];
 const loadedCategories = {};
 
-// Configuració d'estils visuals per categoria
 const CATEGORY_STYLES = {
-    walk:  { color: "#16a34a", weight: 3,   dashArray: null },
-    cycle: { color: "#f97316", weight: 3,   dashArray: null },
+    walk:  { color: "#16a34a", weight: 3, dashArray: null },
+    cycle: { color: "#ea580c", weight: 3,   dashArray: null },
     bus:   { color: "#d97706", weight: 3,   dashArray: null },
     land:  { color: "#dc2626", weight: 3,   dashArray: null },
     cotxe: { color: "#dc2626", weight: 3,   dashArray: null },
@@ -99,7 +97,7 @@ function updateInfo(track) {
     const metaEl = document.getElementById("meta");
 
     if (!track) {
-        if (titleEl) titleEl.innerText = "Cliqueu en una ruta";
+        if (titleEl) titleEl.innerText = "Fes clic en una ruta";
         if (metaEl) metaEl.innerText = "";
         return;
     }
@@ -107,8 +105,6 @@ function updateInfo(track) {
     if (titleEl) titleEl.innerText = track.name || track.title || "Ruta sense nom";
     if (metaEl) metaEl.innerText = `${track.category ? track.category.toUpperCase() : ''} • ${formatDate(track.date)}`;
 }
-
-// --- GESTIÓ D'ESTILS I VISIBILITAT ---
 
 function applyStyles() {
     allLines.forEach(l => {
@@ -118,7 +114,6 @@ function applyStyles() {
         const style = CATEGORY_STYLES[cat] || { color: "#3388ff", weight: 3, dashArray: null };
 
         if (!activeLine) {
-            // ✅ CORREGIT: Manté el color i la línia discontínua en actualitzar l'estil
             l.setStyle({ color: style.color, weight: style.weight, dashArray: style.dashArray, opacity: 0.85 });
             return;
         }
@@ -228,19 +223,20 @@ function loadCategory(category) {
         });
 }
 
+// --- ESDEVENIMENTS I INTERACCIÓ DE LA LLEGENDA ---
+
 map.on("click", () => {
     activeLine = null;
     updateInfo(null);
     applyStyles();
 });
 
-// ✅ CORREGIT: Carregador inicial automàtic al DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
+    // 1. Checkboxes
     document.querySelectorAll("#filters input[type='checkbox']").forEach(cb => {
         const category = cb.value;
         categoryState[category] = cb.checked;
 
-        // Si està marcat a l'HTML en carregar la pàgina, es carrega automàticament
         if (cb.checked) {
             loadCategory(category);
         }
@@ -256,5 +252,58 @@ document.addEventListener("DOMContentLoaded", () => {
                 applyStyles();
             }
         });
+    });
+
+    // 2. Control del desplegable auto-ocultable
+    const filtersPanel = document.getElementById("filters");
+    const toggleBtn = document.getElementById("toggle-filters");
+    const filtersWrapper = document.getElementById("filters-wrapper");
+
+    let hideTimer = null;
+
+    function showFilters() {
+        filtersPanel.classList.remove("collapsed");
+        resetHideTimer();
+    }
+
+    function hideFilters() {
+        filtersPanel.classList.add("collapsed");
+        clearTimeout(hideTimer);
+    }
+
+    function resetHideTimer() {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            hideFilters();
+        }, 3500); // 3.5 segons d'inactivitat per plegar-se
+    }
+
+    // Fer clic al botó alterna entre desplegat i col·lapsat
+    toggleBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (filtersPanel.classList.contains("collapsed")) {
+            showFilters();
+        } else {
+            hideFilters();
+        }
+    });
+
+    // Mantenir obert mentre el ratolí estigui a sobre
+    filtersWrapper.addEventListener("mouseenter", () => {
+        clearTimeout(hideTimer);
+    });
+
+    // Iniciar compte enrere quan el ratolí surt de la zona
+    filtersWrapper.addEventListener("mouseleave", () => {
+        if (!filtersPanel.classList.contains("collapsed")) {
+            resetHideTimer();
+        }
+    });
+
+    // Amagar si es fa clic fora del panell
+    document.addEventListener("click", (e) => {
+        if (!filtersWrapper.contains(e.target)) {
+            hideFilters();
+        }
     });
 });
