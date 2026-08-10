@@ -22,13 +22,13 @@ const loadedCategories = {};
 
 // Configuració d'estils visuals per categoria
 const CATEGORY_STYLES = {
-    walk:  { color: "#16a34a", weight: 2.5, dashArray: "3, 6" },
-    cycle: { color: "#f97316", weight: 3,   dashArray: "8, 6" },
-    bus:   { color: "#d97706", weight: 4,   dashArray: null },
-    land:  { color: "#dc2626", weight: 4,   dashArray: null },
-    cotxe: { color: "#dc2626", weight: 4,   dashArray: null },
-    car:   { color: "#dc2626", weight: 4,   dashArray: null },
-    train: { color: "#c026d3", weight: 5,   dashArray: null },
+    walk:  { color: "#16a34a", weight: 3,   dashArray: null },
+    cycle: { color: "#f97316", weight: 3,   dashArray: null },
+    bus:   { color: "#d97706", weight: 3,   dashArray: null },
+    land:  { color: "#dc2626", weight: 3,   dashArray: null },
+    cotxe: { color: "#dc2626", weight: 3,   dashArray: null },
+    car:   { color: "#dc2626", weight: 3,   dashArray: null },
+    train: { color: "#c026d3", weight: 3,   dashArray: null },
     boat:  { color: "#0284c7", weight: 3,   dashArray: "10, 8" },
     plane: { color: "#4f46e5", weight: 3,   dashArray: "16, 10" }
 };
