@@ -1,17 +1,15 @@
 /**
  * GEOROUTE VIEWER (Web pública estàtica)
- * Només lectura. Carrega les rutes des de static/json_publics/ i les dibuixa a Leaflet.
  */
 
-// 1. Inicialització del mapa base
+// 1. Inicialització del mapa base (URL de CARTO simplificada)
 const map = L.map("map", {
     center: [41.72, 1.82],
     zoom: 8,
     zoomControl: true
 });
 
-// Capa base fosca / CartoDB Dark Matter
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
 }).addTo(map);
@@ -23,15 +21,15 @@ const loadedCategories = {};
 
 // Configuració d'estils visuals per categoria
 const CATEGORY_STYLES = {
-    walk:  { color: "#16a34a", weight: 2.5, dashArray: "3, 6" },   // Verd - Puntejada fina
-    cycle: { color: "#f97316", weight: 3,   dashArray: "8, 6" },   // Taronja - Discontínua fina
-    bus:   { color: "#d97706", weight: 4,   dashArray: null },     // Groc Àmbar - Contínua
-    land:  { color: "#dc2626", weight: 4,   dashArray: null },     // Vermell - Contínua (Cotxe)
+    walk:  { color: "#16a34a", weight: 2.5, dashArray: "3, 6" },
+    cycle: { color: "#f97316", weight: 3,   dashArray: "8, 6" },
+    bus:   { color: "#d97706", weight: 4,   dashArray: null },
+    land:  { color: "#dc2626", weight: 4,   dashArray: null },
     cotxe: { color: "#dc2626", weight: 4,   dashArray: null },
     car:   { color: "#dc2626", weight: 4,   dashArray: null },
-    train: { color: "#c026d3", weight: 5,   dashArray: null },     // Magenta - Contínua gruixuda
-    boat:  { color: "#0284c7", weight: 3,   dashArray: "10, 8" },  // Blau Marí - Discontínua
-    plane: { color: "#4f46e5", weight: 3,   dashArray: "16, 10" }  // Índigo - Traç llarg
+    train: { color: "#c026d3", weight: 5,   dashArray: null },
+    boat:  { color: "#0284c7", weight: 3,   dashArray: "10, 8" },
+    plane: { color: "#4f46e5", weight: 3,   dashArray: "16, 10" }
 };
 
 const categoryState = {
@@ -44,7 +42,6 @@ const categoryState = {
     plane: false
 };
 
-// --- DESCODIFICADOR DE POLILÍNIA CODIFICADA (GOOGLE) ---
 function decodePolyline(encoded) {
     if (!encoded) return [];
     let points = [];
@@ -75,8 +72,6 @@ function decodePolyline(encoded) {
     }
     return points;
 }
-
-// --- UTILITATS ---
 
 function formatDate(dateStr) {
     if (!dateStr) return "Sense data";
@@ -119,17 +114,18 @@ function applyStyles() {
         if (!map.hasLayer(l)) return;
 
         const cat = l._track.category;
-        const style = CATEGORY_STYLES[cat] || { weight: 3 };
+        const style = CATEGORY_STYLES[cat] || { color: "#3388ff", weight: 3, dashArray: null };
 
         if (!activeLine) {
-            l.setStyle({ opacity: 0.85, weight: style.weight });
+            // ✅ CORREGIT: Manté el color i la línia discontínua en actualitzar l'estil
+            l.setStyle({ color: style.color, weight: style.weight, dashArray: style.dashArray, opacity: 0.85 });
             return;
         }
 
         if (l === activeLine) {
-            l.setStyle({ opacity: 1, weight: style.weight + 2 });
+            l.setStyle({ color: style.color, weight: style.weight + 2, dashArray: style.dashArray, opacity: 1 });
         } else {
-            l.setStyle({ opacity: 0.25, weight: Math.max(1.5, style.weight - 1) });
+            l.setStyle({ color: style.color, weight: Math.max(1.5, style.weight - 1), dashArray: style.dashArray, opacity: 0.25 });
         }
     });
 }
@@ -144,8 +140,6 @@ function updateVisibility() {
         }
     });
 }
-
-// --- CARREGADOR DE CATEGORIES DES DE STATIC/JSON_PUBLICS ---
 
 function loadCategory(category) {
     if (loadedCategories[category]) {
@@ -219,6 +213,7 @@ function loadCategory(category) {
             loadedCategories[category] = true;
             hideLoading();
             updateVisibility();
+            applyStyles();
 
             const visibleLines = allLines.filter(l => map.hasLayer(l));
             if (visibleLines.length > 0) {
@@ -232,22 +227,29 @@ function loadCategory(category) {
         });
 }
 
-// --- ESDEVENIMENTS ---
-
 map.on("click", () => {
     activeLine = null;
     updateInfo(null);
     applyStyles();
 });
 
+// ✅ CORREGIT: Carregador inicial automàtic al DOMContentLoaded
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#filters input[type='checkbox']").forEach(cb => {
+        const category = cb.value;
+        categoryState[category] = cb.checked;
+
+        // Si està marcat a l'HTML en carregar la pàgina, es carrega automàticament
+        if (cb.checked) {
+            loadCategory(category);
+        }
+
         cb.addEventListener("change", (e) => {
-            const category = e.target.value;
-            categoryState[category] = e.target.checked;
+            const cat = e.target.value;
+            categoryState[cat] = e.target.checked;
 
             if (e.target.checked) {
-                loadCategory(category);
+                loadCategory(cat);
             } else {
                 updateVisibility();
                 applyStyles();
