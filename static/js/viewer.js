@@ -9,9 +9,17 @@ const map = L.map("map", {
     zoomControl: true
 });
 
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+// 1. Capa de fons: Relleu i ombrejat de muntanyes (Esri Hillshade)
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19,
-    attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom'
+    attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TNM'
+}).addTo(map);
+
+// 2. Capa superior: Carreteres, ciutats i noms llatins (CARTO Positron translúcid)
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    opacity: 0.7, // Permet veure el relleu del fons a través del mapa gris
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }).addTo(map);
 
 // Estat global
@@ -21,14 +29,14 @@ const loadedCategories = {};
 
 const CATEGORY_STYLES = {
     walk:  { color: "#16a34a", weight: 3, dashArray: null },
-    cycle: { color: "#ea580c", weight: 3,   dashArray: null },
-    bus:   { color: "#d97706", weight: 3,   dashArray: null },
-    land:  { color: "#dc2626", weight: 3,   dashArray: null },
-    cotxe: { color: "#dc2626", weight: 3,   dashArray: null },
-    car:   { color: "#dc2626", weight: 3,   dashArray: null },
-    train: { color: "#c026d3", weight: 3,   dashArray: null },
-    boat:  { color: "#0284c7", weight: 3,   dashArray: "10, 8" },
-    plane: { color: "#4f46e5", weight: 3,   dashArray: "16, 10" }
+    cycle: { color: "#ea580c", weight: 3, dashArray: null },
+    bus:   { color: "#d97706", weight: 3, dashArray: null },
+    land:  { color: "#dc2626", weight: 3, dashArray: null },
+    cotxe: { color: "#dc2626", weight: 3, dashArray: null },
+    car:   { color: "#dc2626", weight: 3, dashArray: null },
+    train: { color: "#c026d3", weight: 3, dashArray: null },
+    boat:  { color: "#0284c7", weight: 3, dashArray: "10, 8" },
+    plane: { color: "#4f46e5", weight: 3, dashArray: "16, 10" }
 };
 
 const categoryState = {
