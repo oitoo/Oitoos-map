@@ -1,19 +1,19 @@
 /**
- * GEOROUTE VIEWER (Web Pública Estàtica)
+ * GEOROUTE VIEWER (Web pública estàtica)
  * Només lectura. Carrega les rutes des de static/json_publics/ i les dibuixa a Leaflet.
  */
 
-// 1. Inicialització del Mapa Base
+// 1. Inicialització del mapa base
 const map = L.map("map", {
     center: [41.72, 1.82],
     zoom: 8,
     zoomControl: true
 });
 
-// Capa Base fosca / CartoDB Dark Matter
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+// Capa base fosca / CartoDB Dark Matter
+L.tileLayer('https://{s}[.basemaps.cartocdn.com/dark_all/](https://.basemaps.cartocdn.com/dark_all/){z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+    attribution: '&copy; <a href="[https://www.openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)">OpenStreetMap</a> &copy; <a href="[https://carto.com/](https://carto.com/)">CARTO</a>'
 }).addTo(map);
 
 // Estat global
@@ -25,7 +25,7 @@ const loadedCategories = {};
 const CATEGORY_COLORS = {
     walk: "#22c55e",     // Verd
     cycle: "#f97316",    // Taronja
-    train: "#a855f7",    // Purpura
+    train: "#a855f7",    // Púrpura
     land: "#ef4444",     // Vermell
     boat: "#3b82f6",     // Blau
     plane: "#eab308"     // Groc
@@ -40,7 +40,7 @@ const categoryState = {
     plane: false
 };
 
-// --- DESCODIFICADOR DE POLYLINE COMPRIMIDA (GOOGLE) ---
+// --- DESCODIFICADOR DE POLILÍNIA CODIFICADA (GOOGLE) ---
 function decodePolyline(encoded) {
     if (!encoded) return [];
     let points = [];
@@ -103,7 +103,7 @@ function updateInfo(track) {
     const metaEl = document.getElementById("meta");
 
     if (!track) {
-        if (titleEl) titleEl.innerText = "Fes clic en una ruta";
+        if (titleEl) titleEl.innerText = "Cliqueu en una ruta";
         if (metaEl) metaEl.innerText = "";
         return;
     }
@@ -150,7 +150,7 @@ function loadCategory(category) {
         return;
     }
 
-    showLoading(`Carregant rutes de ${category}...`);
+    showLoading(`S'estan carregant les rutes de ${category}...`);
 
     // Ruta relativa compatible amb GitHub Pages i Flask
     const jsonPath = `./static/json_publics/${category}.json`;

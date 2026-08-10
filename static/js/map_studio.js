@@ -1,4 +1,17 @@
 // ==========================================
+// UTILITATS DE SEGURETAT I FORMAT
+// ==========================================
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// ==========================================
 // CONFIGURACIÓ INICIAL I VARIABLES D'ESTAT
 // ==========================================
 let rawCoords = JSON.parse(document.getElementById('flask-coords')?.textContent || '[]');
@@ -37,14 +50,14 @@ let draggedItemIdx = null;
 window.modeTransportActual = 'train';
 
 // -------------------------------------------------------------------------
-// MAPA D'ESTILS I MODULS DE TRANSPORT (INCLOU BUS I COTXE/LAND)
+// MAPA D'ESTILS I MÒDULS DE TRANSPORT (INCLOU BUS I COTXE/MOTOR)
 // -------------------------------------------------------------------------
 const COLORS_CATEGORIA = {
     'walk': '#22c55e',      // Verd
     'cycle': '#f97316',     // Taronja
-    'bus': '#06b6d4',       // Cian / Blau Turquesa
+    'bus': '#06b6d4',       // Cian / Blau turquesa
     'land': '#ef4444',      // Vermell (Cotxe / Motor)
-    'cotxe': '#ef4444',     // Àlies per Cotxe
+    'cotxe': '#ef4444',     // Àlies per a Cotxe
     'train': '#a855f7',     // Púrpura (Tren)
     'boat': '#3b82f6',      // Blau
     'plane': '#eab308'      // Groc
@@ -54,7 +67,7 @@ const MODULS_TRANSPORT = {
     'walk': { nom: 'A peu', icona: '🥾', script: 'route_walk' },
     'cycle': { nom: 'Bicicleta', icona: '🚲', script: 'route_bike' },
     'bus': { nom: 'Autobús', icona: '🚌', script: 'route_bus' },
-    'land': { nom: 'Cotxe/Motor', icona: '🚗', script: 'route_car' },
+    'land': { nom: 'Cotxe / Motor', icona: '🚗', script: 'route_car' },
     'train': { nom: 'Tren', icona: '🚆', script: 'route_train' },
     'boat': { nom: 'Barca', icona: '🚢', script: 'route_ship' },
     'plane': { nom: 'Avió', icona: '✈️', script: 'route_plane' }
@@ -74,7 +87,7 @@ function normalitzarMode(mode) {
 }
 
 // ==========================================
-// DESCODIFICADOR DE POLYLINE (GOOGLE)
+// DESCODIFICADOR DE POLILÍNIA (GOOGLE)
 // ==========================================
 function decodePolyline(encoded) {
     if (!encoded) return [];
@@ -284,10 +297,10 @@ function filtrarIAnimarRutesMapa() {
 
                 const popupHtml = `
                     <div class="p-1 space-y-2">
-                        <h4 class="font-bold text-sm text-white">${modInfo.icona} ${ruta.title || ruta.name || 'Ruta sense nom'}</h4>
-                        <p class="text-xs text-gray-400">📅 Data: ${ruta.date || 'Sense data'}</p>
-                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${color}; font-weight:bold;">${modInfo.nom.toUpperCase()}</span></p>
-                        <button onclick="window.desverificarRuta('${ruta.id || ruta.filename}')" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-1 px-2 rounded text-xs transition mt-2 cursor-pointer">
+                        <h4 class="font-bold text-sm text-white">${modInfo.icona} ${escapeHtml(ruta.title || ruta.name || 'Ruta sense nom')}</h4>
+                        <p class="text-xs text-gray-400">📅 Data: ${escapeHtml(ruta.date || 'Sense data')}</p>
+                        <p class="text-xs text-gray-400">🏷️ Categoria: <span style="color:${color}; font-weight:bold;">${escapeHtml(modInfo.nom.toUpperCase())}</span></p>
+                        <button onclick="window.desverificarRuta('${escapeHtml(ruta.id || ruta.filename)}')" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-1 px-2 rounded text-xs transition mt-2 cursor-pointer">
                             ⚠️ Desverificar / Tornar a pendents
                         </button>
                     </div>
@@ -314,9 +327,11 @@ window.desverificarRuta = async function(routeId) {
             map.closePopup();
             await carregarRutesMapa();
         } else {
+            alert("❌ Error en desverificar la ruta: " + (resp.message || "Error desconegut"));
             console.error("Error en desverificar la ruta:", resp.message);
         }
     } catch (e) {
+        alert("❌ Error de connexió en desverificar la ruta.");
         console.error("Error de connexió en desverificar la ruta:", e);
     }
 };
@@ -332,7 +347,7 @@ window.publicarAGitHub = async function() {
 
     boto.disabled = true;
     boto.classList.add('opacity-75', 'cursor-not-allowed');
-    if (textBoto) textBoto.innerText = 'Publicant...';
+    if (textBoto) textBoto.innerText = "S'està publicant...";
 
     try {
         const resposta = await fetch('/api/publish', {
@@ -378,7 +393,7 @@ window.canviarModeBarraLateral = function(mode) {
             const btnLupa = document.getElementById('boto-lupa');
             const txtLupa = document.getElementById('lupa-text');
             if (btnLupa) btnLupa.classList.remove('actiu');
-            if (txtLupa) txtLupa.textContent = "Activar Lupa d'Inspecció";
+            if (txtLupa) txtLupa.textContent = "Activar la lupa d'inspecció";
         }
     }
 };
@@ -405,7 +420,7 @@ function comprovarEstatBarraLateral() {
 }
 
 // ==========================================
-// POPUP CREACIÓ DE RUTA (ASSISTENT IA)
+// FINESTRA EMERGENT DE CREACIÓ DE RUTA (ASSISTENT D'IA)
 // ==========================================
 window.obrirCreacioRuta = function() {
     const existent = document.getElementById('modal-creacio-ruta');
@@ -425,7 +440,7 @@ window.obrirCreacioRuta = function() {
             <button id="tab-btn-${key}" onclick="window.canviarPestanyaTransport('${key}')" 
                     class="tab-mode-btn flex-1 justify-center px-3 py-2 text-xs rounded-t border-t border-x transition flex items-center gap-1.5 whitespace-nowrap ${classes}">
                 <span>${item.icona}</span>
-                <span>${item.nom}</span>
+                <span>${escapeHtml(item.nom)}</span>
             </button>
         `;
     }).join('');
@@ -435,7 +450,7 @@ window.obrirCreacioRuta = function() {
         <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-3xl p-6 text-gray-100 flex flex-col gap-4">
             
             <div class="flex justify-between items-center border-b border-gray-800 pb-3">
-                <h3 class="text-base font-bold text-indigo-400 flex items-center gap-2">🌐 Crear Nova Ruta</h3>
+                <h3 class="text-base font-bold text-indigo-400 flex items-center gap-2">🌐 Crear una nova ruta</h3>
                 <button onclick="document.getElementById('modal-creacio-ruta').remove()" class="text-gray-400 hover:text-white text-lg font-bold px-2">&times;</button>
             </div>
 
@@ -445,20 +460,20 @@ window.obrirCreacioRuta = function() {
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-850 p-4 rounded-lg border border-gray-800" id="grid-camps-formulari">
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Ciutat Origen</label>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Ciutat d'origen</label>
                     <input type="text" id="ia-origen" placeholder="Ex: Barcelona" class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Ciutat Destí</label>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Ciutat de destí</label>
                     <input type="text" id="ia-desti" placeholder="Ex: Reus" class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Data del Viatge</label>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Data del viatge</label>
                     <input type="date" id="ia-data" value="${dataAvui}" class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 
                 <div id="container-mode-tren">
-                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Mode de Tren</label>
+                    <label class="block text-[11px] font-semibold text-gray-400 mb-1">Mode de tren</label>
                     <select id="ia-mode-tren" class="w-full bg-gray-800 border border-gray-700 rounded p-2 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer">
                         <option value="Regional" selected>Regional</option>
                         <option value="Alta velocitat">Alta velocitat</option>
@@ -469,10 +484,10 @@ window.obrirCreacioRuta = function() {
 
             <div>
                 <button onclick="window.copiarPromptIA()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-3 rounded text-xs transition flex items-center justify-center gap-2 shadow cursor-pointer">
-                    📋 1. Copiar Prompt adaptat per a la IA
+                    📋 1. Copiar el prompt adaptat per a la IA
                 </button>
                 <div id="feedback-prompt" class="text-[11px] text-emerald-400 hidden text-center mt-1.5 font-medium">
-                    ✓ Prompt copiat al portaretalls! Enganxa'l a la teva IA preferida.
+                    ✓ S'ha copiat el prompt al portaretalls! Enganxa'l a la teva IA preferida.
                 </div>
             </div>
 
@@ -486,9 +501,9 @@ window.obrirCreacioRuta = function() {
                     Executable: generator/${MODULS_TRANSPORT['train'].script}.py
                 </span>
                 <div class="flex gap-2">
-                    <button onclick="document.getElementById('modal-creacio-ruta').remove()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs transition cursor-pointer">Cancelar</button>
+                    <button onclick="document.getElementById('modal-creacio-ruta').remove()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs transition cursor-pointer">Cancel·lar</button>
                     <button onclick="window.enviarRutaIA()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-xs transition flex items-center gap-1 shadow cursor-pointer">
-                        🚀 Crear Ruta
+                        🚀 Crear la ruta
                     </button>
                 </div>
             </div>
@@ -538,7 +553,10 @@ window.copiarPromptIA = async function() {
     const modeKey = window.modeTransportActual;
     const modeInfo = MODULS_TRANSPORT[modeKey];
 
-    if (!origen || !desti) return;
+    if (!origen || !desti) {
+        alert("⚠️ Indiqueu almenys la ciutat d'origen i la de destí.");
+        return;
+    }
 
     let modeTextDesc = modeInfo.nom;
     if (modeKey === 'train') {
@@ -550,7 +568,7 @@ window.copiarPromptIA = async function() {
 
 Genera la ruta des de ${origen} fins a ${desti} per al dia ${dataViatge}.
 
-Regles Estrictes:
+Regles estrictes:
 1. Retorna ÚNICAMENT el llistat de punts o estacions. Sense introduccions, salutacions ni codi markdown.
 2. El punt d'origen ha de ser la primera línia, el punt de destí l'última línia, i entremig els punts de pas imprescindibles per dibuixar el traçat real sense salts abruptes.
 3. Has d'utilitzar OBLIGATÒRIAMENT aquest format exacte per a cada línia: Nom del Punt|Latitud,Longitud`;
@@ -570,14 +588,20 @@ window.enviarRutaIA = async function() {
     const modeInfo = MODULS_TRANSPORT[modeKey];
     const respostaText = document.getElementById('ia-resposta').value.trim();
 
-    if (!respostaText) return;
+    if (!respostaText) {
+        alert("⚠️ Enganxeu la resposta de la IA abans de continuar.");
+        return;
+    }
 
     const puntsNous = respostaText
         .split('\n')
         .map(l => l.trim())
         .filter(l => l.length > 0 && !l.startsWith('```'));
 
-    if (puntsNous.length < 2) return;
+    if (puntsNous.length < 2) {
+        alert("⚠️ Calen almenys 2 punts (origen i destí) en format Nom|Lat,Lon.");
+        return;
+    }
 
     let nomMode = modeInfo.nom;
     if (modeKey === 'train') {
@@ -602,7 +626,7 @@ window.enviarRutaIA = async function() {
 
     const elementEstat = document.getElementById('estat-recalcul');
     if (elementEstat) {
-        elementEstat.innerText = `Calculant la ruta (${nomMode}) al servidor, espera...`;
+        elementEstat.innerText = `S'està calculant la ruta (${nomMode}) al servidor, un moment...`;
         elementEstat.classList.remove('hidden');
     }
 
@@ -616,9 +640,11 @@ window.enviarRutaIA = async function() {
         if (resposta.status === "success") {
             window.location.href = `/carregar_pendent/${resposta.filename}`;
         } else {
+            alert("❌ Error en generar la ruta: " + (resposta.message || "Error desconegut"));
             console.error("Error en crear la ruta:", resposta.message);
         }
     } catch (error) {
+        alert("❌ Error de connexió amb el servidor en generar la ruta.");
         console.error("Error de connexió amb el servidor:", error);
     } finally {
         if (elementEstat) elementEstat.classList.add('hidden');
@@ -634,28 +660,59 @@ function renderitzarPunts() {
 
     const divPunts = document.getElementById('llista-punts');
     if (!divPunts) return;
-    divPunts.innerHTML = '';
+    divPunts.replaceChildren(); // Neteja eficient del contenidor
+
+    const fragment = document.createDocumentFragment();
 
     llistaPunts.forEach((punt, idx) => {
         const iconaTipus = punt.tipus === 'estacio' ? '📍' : '📌';
         const colorText = punt.tipus === 'estacio' ? 'text-indigo-200' : 'text-red-300';
         const classeEstat = punt.actiu ? '' : 'punt-desactivat';
-        
-        divPunts.innerHTML += `
-            <div draggable="true" ondragstart="window.dragStart(${idx})" ondragover="window.dragOver(event)" ondrop="window.drop(${idx})" 
-                 class="punt-arrossegable flex justify-between items-center bg-gray-800 hover:bg-gray-700 p-1.5 rounded border border-gray-700 ${classeEstat}">
-                <div class="flex items-center truncate pr-2">
-                    <span class="mr-2 cursor-grab opacity-50">⣿</span>
-                    <span class="mr-1">${iconaTipus}</span>
-                    <span class="${colorText} truncate text-[11px]" title="${punt.nom}">${punt.nom}</span>
-                </div>
-                <button onclick="window.togglePunt(${idx})" class="text-gray-400 hover:text-white font-bold px-2 py-0.5 rounded transition">
-                    ${punt.actiu ? '✕' : '↩️'}
-                </button>
-            </div>`;
 
+        // Element contenidor principal
+        const item = document.createElement('div');
+        item.draggable = true;
+        item.className = `punt-arrossegable flex justify-between items-center bg-gray-800 hover:bg-gray-700 p-1.5 rounded border border-gray-700 ${classeEstat}`;
+        
+        // Listeners directes d'arrossegar
+        item.addEventListener('dragstart', () => window.dragStart(idx));
+        item.addEventListener('dragover', (e) => window.dragOver(e));
+        item.addEventListener('drop', () => window.drop(idx));
+
+        // Bloc de text i icona (esquerra)
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'flex items-center truncate pr-2';
+
+        const handleSpan = document.createElement('span');
+        handleSpan.className = 'mr-2 cursor-grab opacity-50';
+        handleSpan.textContent = '⣿';
+
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'mr-1';
+        iconSpan.textContent = iconaTipus;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = `${colorText} truncate text-[11px]`;
+        nameSpan.title = punt.nom;
+        nameSpan.textContent = punt.nom;
+
+        leftDiv.appendChild(handleSpan);
+        leftDiv.appendChild(iconSpan);
+        leftDiv.appendChild(nameSpan);
+
+        // Botó d'activació / desactivació
+        const btn = document.createElement('button');
+        btn.className = 'text-gray-400 hover:text-white font-bold px-2 py-0.5 rounded transition cursor-pointer';
+        btn.textContent = punt.actiu ? '✕' : '↩️';
+        btn.addEventListener('click', () => window.togglePunt(idx));
+
+        item.appendChild(leftDiv);
+        item.appendChild(btn);
+        fragment.appendChild(item);
+
+        // Afegir marcador Leaflet al mapa si està actiu
         if (punt.actiu && !modeMapaActiu) {
-            let markerOptions = { draggable: true }; 
+            let markerOptions = { draggable: true };
 
             if (punt.tipus === 'forcat') {
                 markerOptions.icon = L.divIcon({
@@ -666,7 +723,19 @@ function renderitzarPunts() {
             }
 
             const marker = L.marker(punt.coords, markerOptions).addTo(map);
-            marker.bindPopup(`<b>${punt.nom}</b><br><span class="text-xs text-gray-500">${punt.coords[0].toFixed(5)}, ${punt.coords[1].toFixed(5)}</span>`);
+
+            const popupContent = document.createElement('div');
+            const b = document.createElement('b');
+            b.textContent = punt.nom;
+            const br = document.createElement('br');
+            const span = document.createElement('span');
+            span.className = 'text-xs text-gray-500';
+            span.textContent = `${punt.coords[0].toFixed(5)}, ${punt.coords[1].toFixed(5)}`;
+            popupContent.appendChild(b);
+            popupContent.appendChild(br);
+            popupContent.appendChild(span);
+
+            marker.bindPopup(popupContent);
 
             marker.on('dragend', function(e) {
                 const novesCoords = e.target.getLatLng();
@@ -682,6 +751,8 @@ function renderitzarPunts() {
             marcadorsActius.push(marker);
         }
     });
+
+    divPunts.appendChild(fragment);
     actualitzarEstatBotoRecalcul();
 }
 
@@ -719,7 +790,7 @@ window.forcarPas = function(lat, lon) {
 };
 
 // ==========================================
-// GESTIÓ DE SWITCHES MANUALS I BLOQUEJOS
+// GESTIÓ DE CANVIS DE VIA MANUALS I BLOQUEJOS
 // ==========================================
 window.crearSwitchManual = function(lat, lon) {
     switchesManuals.push({ lat: lat, lon: lon });
@@ -740,26 +811,63 @@ function renderitzarSwitches() {
 
     const divSwitches = document.getElementById('llista-switches');
     if (!divSwitches) return;
+    divSwitches.replaceChildren();
 
-    divSwitches.innerHTML = switchesManuals.length === 0 ? 
-        `<span class="text-gray-500 italic">Cap intercanviador manual creat.</span>` : '';
+    if (switchesManuals.length === 0) {
+        const emptySpan = document.createElement('span');
+        emptySpan.className = 'text-gray-500 italic';
+        emptySpan.textContent = "No s'ha creat cap canvi de via manual.";
+        divSwitches.appendChild(emptySpan);
+    } else {
+        const fragment = document.createDocumentFragment();
 
-    switchesManuals.forEach((sw, idx) => {
-        const nomText = `${sw.lat.toFixed(5)}, ${sw.lon.toFixed(5)}`;
-        divSwitches.innerHTML += `
-            <div class="flex justify-between items-center bg-gray-800 p-1.5 rounded border border-gray-700">
-                <span class="text-purple-300 text-[11px]">🔀 Punt ${idx + 1} (${nomText})</span>
-                <button onclick="window.eliminarSwitch(${idx})" class="text-red-400 hover:text-white font-bold px-1 transition">✕</button>
-            </div>`;
+        switchesManuals.forEach((sw, idx) => {
+            const nomText = `${sw.lat.toFixed(5)}, ${sw.lon.toFixed(5)}`;
+            
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center bg-gray-800 p-1.5 rounded border border-gray-700';
 
-        if (!modeMapaActiu) {
-            const marker = L.circleMarker([sw.lat, sw.lon], { color: '#a855f7', fillColor: '#c084fc', fillOpacity: 0.9, radius: 7 }).addTo(map);
-            marker.bindPopup(`<b>Punt Manual ${idx + 1}</b><br><span class="text-xs text-gray-400">${nomText}</span><br>
-                <button onclick="window.eliminarSwitch(${idx})" class="w-full bg-red-600 hover:bg-red-500 text-white p-1 rounded text-xs mt-2 transition">Eliminar</button>`, { className: 'lupa-popup' });
+            const span = document.createElement('span');
+            span.className = 'text-purple-300 text-[11px]';
+            span.textContent = `🔀 Punt ${idx + 1} (${nomText})`;
 
-            marcadorsSwitches.push(marker);
-        }
-    });
+            const btn = document.createElement('button');
+            btn.className = 'text-red-400 hover:text-white font-bold px-1 transition cursor-pointer';
+            btn.textContent = '✕';
+            btn.addEventListener('click', () => window.eliminarSwitch(idx));
+
+            item.appendChild(span);
+            item.appendChild(btn);
+            fragment.appendChild(item);
+
+            if (!modeMapaActiu) {
+                const marker = L.circleMarker([sw.lat, sw.lon], { color: '#a855f7', fillColor: '#c084fc', fillOpacity: 0.9, radius: 7 }).addTo(map);
+                
+                const popupContainer = document.createElement('div');
+                const b = document.createElement('b');
+                b.textContent = `Punt manual ${idx + 1}`;
+                const br = document.createElement('br');
+                const spanPopup = document.createElement('span');
+                spanPopup.className = 'text-xs text-gray-400';
+                spanPopup.textContent = nomText;
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'w-full bg-red-600 hover:bg-red-500 text-white p-1 rounded text-xs mt-2 transition cursor-pointer';
+                delBtn.textContent = 'Eliminar';
+                delBtn.addEventListener('click', () => window.eliminarSwitch(idx));
+
+                popupContainer.appendChild(b);
+                popupContainer.appendChild(br);
+                popupContainer.appendChild(spanPopup);
+                popupContainer.appendChild(delBtn);
+
+                marker.bindPopup(popupContainer, { className: 'lupa-popup' });
+                marcadorsSwitches.push(marker);
+            }
+        });
+
+        divSwitches.appendChild(fragment);
+    }
 
     actualitzarEstatBotoRecalcul();
 }
@@ -779,9 +887,36 @@ window.eliminarBloqueig = function(idVia) {
 function actualitzarPanellBloquejos() {
     const div = document.getElementById('llista-bloquejades');
     if (!div) return;
+    div.replaceChildren();
 
-    div.innerHTML = viesBloquejades.length === 0 ? `<span class="text-gray-500 italic">Cap via bloquejada.</span>` :
-        viesBloquejades.map(v => `<div class="flex justify-between items-center bg-gray-800 p-1 rounded"><span>⛔ ${v.nom}</span><button onclick="window.eliminarBloqueig(${v.id})" class="text-red-400">✕</button></div>`).join('');
+    if (viesBloquejades.length === 0) {
+        const span = document.createElement('span');
+        span.className = 'text-gray-500 italic';
+        span.textContent = 'No hi ha cap via bloquejada.';
+        div.appendChild(span);
+    } else {
+        const fragment = document.createDocumentFragment();
+
+        viesBloquejades.forEach(v => {
+            const item = document.createElement('div');
+            item.className = 'flex justify-between items-center bg-gray-800 p-1 rounded';
+
+            const span = document.createElement('span');
+            span.textContent = `⛔ ${v.nom}`;
+
+            const btn = document.createElement('button');
+            btn.className = 'text-red-400 hover:text-red-300 font-bold px-1 transition cursor-pointer';
+            btn.textContent = '✕';
+            btn.addEventListener('click', () => window.eliminarBloqueig(v.id));
+
+            item.appendChild(span);
+            item.appendChild(btn);
+            fragment.appendChild(item);
+        });
+
+        div.appendChild(fragment);
+    }
+
     actualitzarEstatBotoRecalcul();
 }
 
@@ -840,9 +975,11 @@ async function recalcularRutaEditada() {
         if (resposta.status === "success") {
             window.location.href = `/carregar_pendent/${resposta.filename}`;
         } else {
+            alert("❌ Error en recalcular la ruta: " + (resposta.message || "Error desconegut"));
             console.error("Error en recalcular:", resposta.message);
         }
     } catch(e) {
+        alert("❌ Error de connexió amb el servidor en recalcular.");
         console.error("Error de connexió amb el servidor:", e);
     } finally {
         if (btnRecalcular) btnRecalcular.disabled = false;
@@ -904,9 +1041,11 @@ window.acceptarEdicio = async function() {
         if (resp.status === "success") {
             canviarModeBarraLateral('VERIFICACIO');
         } else {
+            alert("❌ Error en desar l'edició: " + (resp.message || "Error desconegut"));
             console.error("Error en desar l'edició:", resp.message);
         }
     } catch (e) {
+        alert("❌ Error de connexió en desar l'edició.");
         console.error("Error de connexió:", e);
     }
 };
@@ -917,7 +1056,10 @@ window.verificarIDesar = async function() {
     const dataRuta = document.getElementById('data-ruta')?.value;
     const modeTransport = document.getElementById('select-mode-transport')?.value;
 
-    if (!selectGpx || !selectGpx.value) return;
+    if (!selectGpx || !selectGpx.value) {
+        alert("⚠️ Seleccioneu un fitxer abans de verificar.");
+        return;
+    }
 
     const payload = {
         gpx_filename: selectGpx.value,
@@ -937,15 +1079,17 @@ window.verificarIDesar = async function() {
         if (resp.status === "success") {
             window.location.href = '/';
         } else {
+            alert("❌ Error en verificar la ruta: " + (resp.message || "Error desconegut"));
             console.error("Error en verificar la ruta:", resp.message);
         }
     } catch (e) {
+        alert("❌ Error de connexió amb el servidor en verificar.");
         console.error("Error de connexió amb el servidor:", e);
     }
 };
 
 // ==========================================
-// EINES DEL MAPA (LUPA D'INSPECCIÓ OVERPASS)
+// EINES DEL MAPA (LUPA D'INSPECCIÓ D'OVERPASS)
 // ==========================================
 function configurarEines() {
     const botoLupa = document.getElementById('boto-lupa');
@@ -956,7 +1100,7 @@ function configurarEines() {
             modeLupaActiu = !modeLupaActiu; 
             botoLupa.classList.toggle('actiu', modeLupaActiu);
             if (txtLupa) {
-                txtLupa.textContent = modeLupaActiu ? "Lupa Activa (Clica al mapa)" : "Activar Lupa d'Inspecció";
+                txtLupa.textContent = modeLupaActiu ? "Lupa activa (cliqueu al mapa)" : "Activar la lupa d'inspecció";
             }
         });
     }
@@ -969,39 +1113,52 @@ function configurarEines() {
         const lat = e.latlng.lat; const lon = e.latlng.lng;
         capaInspeccioLupa.clearLayers();
         
-        const popup = L.popup({ className: 'lupa-popup' }).setLatLng(e.latlng).setContent("Processant dades...").openOn(map);
+        const popup = L.popup({ className: 'lupa-popup' }).setLatLng(e.latlng).setContent("S'estan processant les dades...").openOn(map);
         
         const radi = esEdicio ? 1500 : 500; 
         const query = `[out:json][timeout:25]; (way(around:${radi},${lat},${lon});); out body; >; out skel qt;`;
         
-        const dades = await fetch("[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)", { 
-            method: "POST", 
-            body: "data=" + encodeURIComponent(query), 
-            headers: { "Content-Type": "application/x-www-form-urlencoded" } 
-        }).then(r => r.json()).catch(() => null);
-        
-        map.closePopup(popup);
-        if (!dades || !dades.elements || dades.elements.length === 0) return;
-        
-        const nodesMap = {};
-        dades.elements.forEach(el => { if(el.type === 'node') nodesMap[el.id] = [el.lat, el.lon]; });
-        
-        dades.elements.forEach(via => {
-            if (via.type === 'way') {
-                const coords = via.nodes.map(id => nodesMap[id]).filter(c => c);
-                if (!coords.length) return;
+        try {
+            const dades = await fetch("[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)", { 
+                method: "POST", 
+                body: "data=" + encodeURIComponent(query), 
+                headers: { "Content-Type": "application/x-www-form-urlencoded" } 
+            }).then(r => r.json());
 
-                const linia = L.polyline(coords, { color: esEdicio ? '#f59e0b' : '#3b82f6', weight: 4 }).addTo(capaInspeccioLupa);
+            map.closePopup(popup);
 
-                let htmlPopup = `<b>${via.tags?.name || 'Via/Carretera'} (ID: ${via.id})</b>`;
-                if (esEdicio) {
-                    htmlPopup += `<hr class="my-2 border-gray-500">
-                             <button onclick="window.bloquejarVia(${via.id}, '${via.tags?.name || via.id}')" class="w-full bg-red-600 hover:bg-red-500 text-white p-1 rounded text-xs mb-1 transition cursor-pointer">⛔ Bloquejar</button>
-                             <button onclick="window.forcarPas(${coords[0][0]}, ${coords[0][1]})" class="w-full bg-blue-600 hover:bg-blue-500 text-white p-1 rounded text-xs transition cursor-pointer">📍 Forçar Pas Aquí</button>`;
-                }
-                linia.bindPopup(htmlPopup, { className: 'lupa-popup' });
+            if (!dades || !dades.elements || dades.elements.length === 0) {
+                L.popup({ className: 'lupa-popup' })
+                    .setLatLng(e.latlng)
+                    .setContent("<span class='text-xs text-gray-400'>No s'han trobat vies properes.</span>")
+                    .openOn(map);
+                return;
             }
-        });
+
+            const nodesMap = {};
+            dades.elements.forEach(el => { if(el.type === 'node') nodesMap[el.id] = [el.lat, el.lon]; });
+            
+            dades.elements.forEach(via => {
+                if (via.type === 'way') {
+                    const coords = via.nodes.map(id => nodesMap[id]).filter(c => c);
+                    if (!coords.length) return;
+
+                    const linia = L.polyline(coords, { color: esEdicio ? '#f59e0b' : '#3b82f6', weight: 4 }).addTo(capaInspeccioLupa);
+
+                    const nomViaEscapat = escapeHtml(via.tags?.name || 'Via / Carretera');
+                    let htmlPopup = `<b>${nomViaEscapat} (ID: ${via.id})</b>`;
+                    if (esEdicio) {
+                        htmlPopup += `<hr class="my-2 border-gray-500">
+                                 <button onclick="window.bloquejarVia(${via.id}, '${nomViaEscapat}')" class="w-full bg-red-600 hover:bg-red-500 text-white p-1 rounded text-xs mb-1 transition cursor-pointer">⛔ Bloquejar</button>
+                                 <button onclick="window.forcarPas(${coords[0][0]}, ${coords[0][1]})" class="w-full bg-blue-600 hover:bg-blue-500 text-white p-1 rounded text-xs transition cursor-pointer">📍 Forçar el pas per aquí</button>`;
+                    }
+                    linia.bindPopup(htmlPopup, { className: 'lupa-popup' });
+                }
+            });
+        } catch (err) {
+            console.error("Error en consultar l'API d'Overpass:", err);
+            popup.setContent("<span class='text-xs text-red-400'>Error en carregar les dades d'Overpass.</span>");
+        }
     });
 }
 
