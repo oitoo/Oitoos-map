@@ -264,31 +264,40 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // 2. Control del desplegable auto-ocultable
+    // 2. Control del desplegable auto-ocultable (7 segons + espera al ratolí)
     const filtersPanel = document.getElementById("filters");
     const toggleBtn = document.getElementById("toggle-filters");
     const filtersWrapper = document.getElementById("filters-wrapper");
 
+    const TEMPS_ESPERA = 7000; // 7 segons
+
     let hideTimer = null;
+    let tempsInici = 0;
+    let tempsCaducat = false;
+    let ratoliASobre = false;
 
     function showFilters() {
         filtersPanel.classList.remove("collapsed");
-        resetHideTimer();
+        tempsInici = Date.now();
+        tempsCaducat = false;
+
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            tempsCaducat = true;
+            // Si el ratolí NO està a sobre quan compleix els 7s, s'amaga
+            if (!ratoliASobre) {
+                hideFilters();
+            }
+        }, TEMPS_ESPERA);
     }
 
     function hideFilters() {
         filtersPanel.classList.add("collapsed");
         clearTimeout(hideTimer);
+        tempsCaducat = false;
     }
 
-    function resetHideTimer() {
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => {
-            hideFilters();
-        }, 3500); // 3.5 segons d'inactivitat per plegar-se
-    }
-
-    // Fer clic al botó alterna entre desplegat i col·lapsat
+    // Botó per obrir/tancar manualment
     toggleBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (filtersPanel.classList.contains("collapsed")) {
@@ -298,15 +307,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Mantenir obert mentre el ratolí estigui a sobre
+    // Quan el ratolí ENTRA
     filtersWrapper.addEventListener("mouseenter", () => {
-        clearTimeout(hideTimer);
+        ratoliASobre = true;
+        // Nota: El temporitzador NO es cancel·la, segueix comptant en segon pla!
     });
 
-    // Iniciar compte enrere quan el ratolí surt de la zona
+    // Quan el ratolí SURT
     filtersWrapper.addEventListener("mouseleave", () => {
-        if (!filtersPanel.classList.contains("collapsed")) {
-            resetHideTimer();
+        ratoliASobre = false;
+        // Si els 7 segons ja han passat mentre el ratolí era a sobre, s'amaga immediatament
+        if (tempsCaducat || (Date.now() - tempsInici >= TEMPS_ESPERA)) {
+            hideFilters();
         }
     });
 
@@ -316,4 +328,4 @@ document.addEventListener("DOMContentLoaded", () => {
             hideFilters();
         }
     });
-});
+})

@@ -131,7 +131,20 @@ function inicialitzarMapa() {
     map = L.map('map', { zoomControl: false });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    // 1. CAPA DE FONS: Relleu i ombrejat de muntanyes (Esri Hillshade)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 21,
+        maxNativeZoom: 16, // Estira la imatge en zooms alts per no donar error
+        attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TNM'
+    }).addTo(map);
+
+    // 2. CAPA SUPERIOR: Vies, ciutats i noms llatins (CARTO Positron clar)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 21,
+        maxNativeZoom: 19,
+        opacity: 0.7, // Permet veure el relleu del fons a través de la capa de vies
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
 
     capaInspeccioLupa = L.featureGroup().addTo(map);
     capesSegments.addTo(map);

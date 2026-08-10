@@ -91,38 +91,34 @@
       transform: scale(1.05);
     }
 
-    /* Panell de filtres MOLT TRANSLÚCID (50% transparència) */
-    #filters {
-      margin-top: 8px;
-      background: rgba(255, 255, 255, 0.5) !important;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      font-size: 13px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      transform-origin: top right;
-      opacity: 1;
-      visibility: visible;
-    }
+    /* Panell de filtres i llegenda */
+#filters {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  
+  /* Transició d'esvaïment suau de 0.5 segons */
+  transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out, visibility 0.5s ease-in-out;
+  opacity: 1;
+  visibility: visible;
+}
 
-    /* ESTAT COL·LAPSAT (AMAGAT) */
-    #filters.collapsed {
-      opacity: 0 !important;
-      transform: scale(0.8) translateY(-10px);
-      pointer-events: none !important;
-      visibility: hidden !important;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      overflow: hidden;
-      border: none;
-    }
+/* Estat col·lapsat (Amagat amb esvaïment) */
+#filters.collapsed {
+  opacity: 0 !important;
+  transform: scale(0.95) translateY(-8px);
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
 
     #filters label { 
       display: flex; 
