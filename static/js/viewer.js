@@ -1,40 +1,33 @@
 /**
- * GEOROUTE VIEWER (Web pública estàtica - Mode Clar & Auto-hide)
+ * GEOROUTE VIEWER (Visor Públic Natiu GeoJSON RFC 7946)
  */
 
-// 1. Inicialització del mapa base amb només alfabet llatí (Esri)
 const map = L.map("map", {
     center: [41.72, 1.82],
     zoom: 8,
     zoomControl: true
 });
 
-// 1. Capa de fons: Relleu Esri
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 21,         // Zoom màxim permès a la pantalla
-    maxNativeZoom: 16,   // A partir de zoom 16, estira la imatge en lloc de demanar-ne de noves
+    maxZoom: 21,         
+    maxNativeZoom: 16,   
     attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TNM'
 }).addTo(map);
 
-// 2. Capa superior: Noms i vies (CARTO)
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 21,
-    maxNativeZoom: 19,   // CARTO arriba molt ben definit fins a nivell 19
+    maxNativeZoom: 19,   
     opacity: 0.7,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }).addTo(map);
 
-// Estat global
-let activeLine = null;
-const allLines = [];
-const loadedCategories = {};
+let activeFeatureLayer = null;
+const loadedGeoJsonLayers = {};
 
 const CATEGORY_STYLES = {
     walk:  { color: "#16a34a", weight: 3, dashArray: null },
     cycle: { color: "#ea580c", weight: 3, dashArray: null },
     bus:   { color: "#d97706", weight: 3, dashArray: null },
-    land:  { color: "#dc2626", weight: 3, dashArray: null },
-    cotxe: { color: "#dc2626", weight: 3, dashArray: null },
     car:   { color: "#dc2626", weight: 3, dashArray: null },
     train: { color: "#c026d3", weight: 3, dashArray: null },
     boat:  { color: "#0284c7", weight: 3, dashArray: "10, 8" },
@@ -46,46 +39,15 @@ const categoryState = {
     cycle: false,
     bus: false,
     train: false,
-    land: false,
+    car: false,
     boat: false,
     plane: false
 };
 
-function decodePolyline(encoded) {
-    if (!encoded) return [];
-    let points = [];
-    let index = 0, len = encoded.length;
-    let lat = 0, lng = 0;
-
-    while (index < len) {
-        let b, shift = 0, result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lat += dlat;
-
-        shift = 0;
-        result = 0;
-        do {
-            b = encoded.charCodeAt(index++) - 63;
-            result |= (b & 0x1f) << shift;
-            shift += 5;
-        } while (b >= 0x20);
-        let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-        lng += dlng;
-
-        points.push([lat / 1e5, lng / 1e5]);
-    }
-    return points;
-}
-
 function formatDate(dateStr) {
     if (!dateStr) return "Sense data";
     const d = new Date(dateStr);
-    if (isNaN(d)) return dateStr;
+    if (isNaN(d.getTime())) return dateStr;
     return d.toLocaleDateString("ca-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
@@ -102,59 +64,59 @@ function hideLoading() {
     if (el) el.style.display = "none";
 }
 
-function updateInfo(track) {
+function updateInfo(props) {
     const titleEl = document.getElementById("title");
     const metaEl = document.getElementById("meta");
 
-    if (!track) {
+    if (!props) {
         if (titleEl) titleEl.innerText = "Fes clic en una ruta";
         if (metaEl) metaEl.innerText = "";
         return;
     }
 
-    if (titleEl) titleEl.innerText = track.name || track.title || "Ruta sense nom";
-    if (metaEl) metaEl.innerText = `${track.category ? track.category.toUpperCase() : ''} • ${formatDate(track.date)}`;
+    if (titleEl) titleEl.innerText = props.nom || props.name || "Ruta sense nom";
+    if (metaEl) metaEl.innerText = `${props.category ? props.category.toUpperCase() : ''} • ${formatDate(props.date)}`;
 }
 
 function applyStyles() {
-    allLines.forEach(l => {
-        if (!map.hasLayer(l)) return;
+    Object.keys(loadedGeoJsonLayers).forEach(category => {
+        const geoJsonGroup = loadedGeoJsonLayers[category];
+        if (!map.hasLayer(geoJsonGroup)) return;
 
-        const cat = l._track.category;
-        const style = CATEGORY_STYLES[cat] || { color: "#3388ff", weight: 3, dashArray: null };
+        const baseStyle = CATEGORY_STYLES[category] || { color: "#3388ff", weight: 3 };
 
-        if (!activeLine) {
-            l.setStyle({ color: style.color, weight: style.weight, dashArray: style.dashArray, opacity: 0.85 });
-            return;
-        }
-
-        if (l === activeLine) {
-            l.setStyle({ color: style.color, weight: style.weight + 2, dashArray: style.dashArray, opacity: 1 });
-        } else {
-            l.setStyle({ color: style.color, weight: Math.max(1.5, style.weight - 1), dashArray: style.dashArray, opacity: 0.25 });
-        }
+        geoJsonGroup.eachLayer(layer => {
+            if (!activeFeatureLayer) {
+                layer.setStyle({ color: baseStyle.color, weight: baseStyle.weight, dashArray: baseStyle.dashArray, opacity: 0.85 });
+            } else if (layer === activeFeatureLayer) {
+                layer.setStyle({ color: baseStyle.color, weight: baseStyle.weight + 2, dashArray: baseStyle.dashArray, opacity: 1 });
+            } else {
+                layer.setStyle({ color: baseStyle.color, weight: Math.max(1.5, baseStyle.weight - 1), dashArray: baseStyle.dashArray, opacity: 0.25 });
+            }
+        });
     });
 }
 
 function updateVisibility() {
-    allLines.forEach(line => {
-        const cat = line._track.category;
-        if (categoryState[cat]) {
-            if (!map.hasLayer(line)) line.addTo(map);
+    Object.keys(categoryState).forEach(category => {
+        const layer = loadedGeoJsonLayers[category];
+        if (!layer) return;
+
+        if (categoryState[category]) {
+            if (!map.hasLayer(layer)) layer.addTo(map);
         } else {
-            if (map.hasLayer(line)) map.removeLayer(line);
+            if (map.hasLayer(layer)) map.removeLayer(layer);
         }
     });
 }
 
 function loadCategory(category) {
-    if (loadedCategories[category]) {
+    if (loadedGeoJsonLayers[category]) {
         updateVisibility();
         return;
     }
 
     showLoading(`S'estan carregant les rutes de ${category}...`);
-
     const jsonPath = `./static/json_publics/${category}.json`;
 
     fetch(jsonPath)
@@ -162,68 +124,43 @@ function loadCategory(category) {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
         })
-        .then(tracks => {
-            tracks.forEach(track => {
-                let latLngs = [];
+        .then(featureCollection => {
+            const styleConfig = CATEGORY_STYLES[category] || { color: "#95a5a6", weight: 3 };
 
-                if (track.polyline) {
-                    latLngs = decodePolyline(track.polyline);
-                } else {
-                    const punts = track.coords || track.points;
-                    if (!punts || !punts.length) return;
-
-                    latLngs = punts.map(p => {
-                        let lat, lon;
-                        if (Array.isArray(p)) {
-                            lat = p[0]; lon = p[1];
-                        } else if (p && p.coords && Array.isArray(p.coords)) {
-                            lat = p.coords[0]; lon = p.coords[1];
-                        } else {
-                            return null;
-                        }
-
-                        if (Number.isInteger(lat)) lat /= 100000;
-                        if (Number.isInteger(lon)) lon /= 100000;
-
-                        return [lat, lon];
-                    }).filter(c => c !== null);
-                }
-
-                if (latLngs.length === 0) return;
-
-                const style = CATEGORY_STYLES[category] || { color: "#95a5a6", weight: 3, dashArray: null };
-
-                const line = L.polyline(latLngs, {
-                    color: style.color,
-                    weight: style.weight,
-                    dashArray: style.dashArray,
+            // Renderització nativa mitjançant L.geoJSON
+            const geoJsonLayer = L.geoJSON(featureCollection, {
+                style: () => ({
+                    color: styleConfig.color,
+                    weight: styleConfig.weight,
+                    dashArray: styleConfig.dashArray,
                     opacity: 0.85
-                });
-
-                line._track = { ...track, category };
-                allLines.push(line);
-
-                if (categoryState[category]) {
-                    line.addTo(map);
+                }),
+                onEachFeature: (feature, layer) => {
+                    layer.on("click", (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        activeFeatureLayer = layer;
+                        updateInfo(feature.properties);
+                        applyStyles();
+                        if (layer.getBounds) {
+                            map.fitBounds(layer.getBounds(), { padding: [30, 30] });
+                        }
+                    });
                 }
-
-                line.on("click", (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    activeLine = line;
-                    updateInfo(line._track);
-                    applyStyles();
-                    map.fitBounds(line.getBounds(), { padding: [30, 30] });
-                });
             });
 
-            loadedCategories[category] = true;
+            loadedGeoJsonLayers[category] = geoJsonLayer;
+
+            if (categoryState[category]) {
+                geoJsonLayer.addTo(map);
+            }
+
             hideLoading();
             updateVisibility();
             applyStyles();
 
-            const visibleLines = allLines.filter(l => map.hasLayer(l));
-            if (visibleLines.length > 0) {
-                const group = L.featureGroup(visibleLines);
+            const visibleLayers = Object.values(loadedGeoJsonLayers).filter(l => map.hasLayer(l));
+            if (visibleLayers.length > 0) {
+                const group = L.featureGroup(visibleLayers);
                 map.fitBounds(group.getBounds(), { padding: [40, 40] });
             }
         })
@@ -236,15 +173,14 @@ function loadCategory(category) {
 // --- ESDEVENIMENTS I INTERACCIÓ DE LA LLEGENDA ---
 
 map.on("click", () => {
-    activeLine = null;
+    activeFeatureLayer = null;
     updateInfo(null);
     applyStyles();
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Checkboxes
     document.querySelectorAll("#filters input[type='checkbox']").forEach(cb => {
-        const category = cb.value;
+        const category = cb.value === 'land' ? 'car' : cb.value;
         categoryState[category] = cb.checked;
 
         if (cb.checked) {
@@ -252,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         cb.addEventListener("change", (e) => {
-            const cat = e.target.value;
+            const cat = e.target.value === 'land' ? 'car' : e.target.value;
             categoryState[cat] = e.target.checked;
 
             if (e.target.checked) {
@@ -264,13 +200,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // 2. Control del desplegable auto-ocultable (7 segons + espera al ratolí)
     const filtersPanel = document.getElementById("filters");
     const toggleBtn = document.getElementById("toggle-filters");
     const filtersWrapper = document.getElementById("filters-wrapper");
 
-    const TEMPS_ESPERA = 7000; // 7 segons
-
+    const TEMPS_ESPERA = 7000;
     let hideTimer = null;
     let tempsInici = 0;
     let tempsCaducat = false;
@@ -284,7 +218,6 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => {
             tempsCaducat = true;
-            // Si el ratolí NO està a sobre quan compleix els 7s, s'amaga
             if (!ratoliASobre) {
                 hideFilters();
             }
@@ -297,35 +230,33 @@ document.addEventListener("DOMContentLoaded", () => {
         tempsCaducat = false;
     }
 
-    // Botó per obrir/tancar manualment
-    toggleBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (filtersPanel.classList.contains("collapsed")) {
-            showFilters();
-        } else {
-            hideFilters();
-        }
-    });
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (filtersPanel.classList.contains("collapsed")) {
+                showFilters();
+            } else {
+                hideFilters();
+            }
+        });
+    }
 
-    // Quan el ratolí ENTRA
-    filtersWrapper.addEventListener("mouseenter", () => {
-        ratoliASobre = true;
-        // Nota: El temporitzador NO es cancel·la, segueix comptant en segon pla!
-    });
+    if (filtersWrapper) {
+        filtersWrapper.addEventListener("mouseenter", () => {
+            ratoliASobre = true;
+        });
 
-    // Quan el ratolí SURT
-    filtersWrapper.addEventListener("mouseleave", () => {
-        ratoliASobre = false;
-        // Si els 7 segons ja han passat mentre el ratolí era a sobre, s'amaga immediatament
-        if (tempsCaducat || (Date.now() - tempsInici >= TEMPS_ESPERA)) {
-            hideFilters();
-        }
-    });
+        filtersWrapper.addEventListener("mouseleave", () => {
+            ratoliASobre = false;
+            if (tempsCaducat || (Date.now() - tempsInici >= TEMPS_ESPERA)) {
+                hideFilters();
+            }
+        });
+    }
 
-    // Amagar si es fa clic fora del panell
     document.addEventListener("click", (e) => {
-        if (!filtersWrapper.contains(e.target)) {
+        if (filtersWrapper && !filtersWrapper.contains(e.target)) {
             hideFilters();
         }
     });
-})
+});

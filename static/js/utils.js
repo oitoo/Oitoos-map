@@ -7,16 +7,19 @@
  * Paleta de colors unificada per a les categories i mitjans de transport.
  */
 export const COLOR_PALETTE = {
-    walk: '#2B8A3E',    // Verd
-    train: '#C92A2A',   // Vermell
-    cycle: '#1864AB',   // Blau
-    bus: '#E67E22',     // Taronja
-    default: '#5C5F66'  // Gris
+    walk: '#16a34a',    // Verd
+    cycle: '#f97316',   // Taronja
+    bus: '#d97706',     // Àmbar
+    land: '#dc2626',    // Vermell (Cotxe / Motor)
+    train: '#c026d3',   // Purpura / Magenta
+    boat: '#0284c7',    // Blau cel
+    plane: '#4f46e5',   // Índigo
+    default: '#5C5F66'  // Gris per defecte
 };
 
 /**
  * Retorna el color hex associat a una categoria o el color per defecte si no existeix.
- * @param {string} category - Nom de la categoria (ex: 'walk', 'train').
+ * @param {string} category - Nom de la categoria (ex: 'walk', 'train', 'land').
  * @returns {string} Codi de color en format hexadecimal.
  */
 export function getCategoryColor(category) {
@@ -63,15 +66,15 @@ export function decodePolyline(encoded) {
 }
 
 /**
- * Executa una consulta a Overpass provant servidors mirall alternatius en cas de fallada de xarxa o de limitació de taxa.
+ * Executa una consulta a Overpass provant servidors mirall alternatius en cas de fallada de xarxa.
  * @param {string} query - Consulta en llenguatge Overpass QL.
  * @returns {Promise<Object>} Objecte JSON retornat per l'API.
  */
 export async function queryOverpassWithFallback(query) {
     const OVERPASS_ENDPOINTS = [
-        '[https://overpass-api.de/api/interpreter](https://overpass-api.de/api/interpreter)',
-        '[https://overpass.kumi.systems/api/interpreter](https://overpass.kumi.systems/api/interpreter)',
-        '[https://maps.mail.ru/osm/tools/overpass/api/interpreter](https://maps.mail.ru/osm/tools/overpass/api/interpreter)'
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
     ];
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
