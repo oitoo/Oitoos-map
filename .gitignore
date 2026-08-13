@@ -13,23 +13,38 @@ generator/
 src/
 templates/
 tools/
+tests/
 MEMORIA_ESTRATEGICA.md
 estat_projecte.md
 estructura_clean*.txt
+check_coherence.py
+*.pdf
+*.zip
 
 # ==========================================
-# 📂 3. DADES PRIVADES / EN CURS D'EDICIÓ
+# 🏢 3. SCRIPTS DE MAPSTUDIO (LABORATORI LOCAL)
 # ==========================================
-dades/pendents/
-pendents/
+# Només es publica viewer.js; la resta són de l'editor local
+static/js/api.js
+static/js/map_layers.js
+static/js/map_studio.js
+static/js/state.js
+static/js/ui_modals.js
+static/js/utils.js
+
+# ==========================================
+# 📂 4. DADES INTERNES I GPX PRIVATS
+# ==========================================
+# Blocat tot el directori de treball privat (pendents, arxivats, drafts, json_interns)
+dades/
 tracks_originals/
+tracks.js
 
-# Memòria cau de grafs d'Overpass (.pkl pesats)
-generator/graph_cache/
+# Memòria cau de grafs pesats (.pkl)
 *.pkl
 
 # ==========================================
-# 💻 4. SISTEMA OPERATIU, IDE I ENTORNS VIRTUALS
+# 💻 5. SISTEMA OPERATIU, IDE I ENTORNS VIRTUALS
 # ==========================================
 __pycache__/
 *.pyc
