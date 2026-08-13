@@ -66,12 +66,15 @@ function hideLoading() {
 }
 
 function updateInfo(props) {
+    const infoEl = document.getElementById("info");
     const titleEl = document.getElementById("title");
     const metaEl = document.getElementById("meta");
 
+    if (!infoEl) return;
+
+    // Si no hi ha cap ruta seleccionada (props és null), amaguem el requadre
     if (!props) {
-        if (titleEl) titleEl.innerText = "Fes clic en una ruta";
-        if (metaEl) metaEl.innerText = "";
+        infoEl.style.display = "none";
         return;
     }
 
