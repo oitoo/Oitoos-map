@@ -1,6 +1,6 @@
 /**
  * static/js/map_studio.js
- * Orquestrador principal de Map Studio adaptat a l'estat GeoJSON[cite: 12, 14].
+ * Orquestrador principal de Map Studio (100% Lectura, Visualització i Circulació SPA).
  */
 
 import { state } from './state.js';
@@ -8,7 +8,6 @@ import * as api from './api.js';
 import { 
   initUI, 
   actualitzarLlistaPuntsUI, 
-  actualitzarPanellBloquejosUI, 
   notificarUsuari, 
   obrirCreacioRuta,
   actualitzarLlistaPendentsUI
@@ -16,8 +15,7 @@ import {
 import { 
   initMapLayers, 
   actualitzarCapesMapa, 
-  mostrarCapesVerificacio,
-  amagarCapesEdicio, 
+  netegarCapesRuta,
   renderGlobalRoutes, 
   netejarRutesGlobals, 
   toggleMagnifier 
@@ -33,7 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initMapLayers(map);
     initUI();
     setupButtonListeners();
-    setupKeyboardShortcuts();
     setupFiltresListeners();
 
     await carregarDadesInicials();
@@ -57,18 +54,36 @@ function initMap() {
 
   L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 21,
-    maxNativeZoom: 16,
+  // Capa 1: Relleu
+  const esriHillshade = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 21,         
+    maxNativeZoom: 13,
     attribution: 'Tiles &copy; Esri &mdash; Source: USGS, Esri, TNM'
-  }).addTo(map);
+  });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  // Capa 2: Carrers
+  const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 21,
     maxNativeZoom: 19,
     opacity: 0.7,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-  }).addTo(map);
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+  });
+
+  // Capa 3: Satèl·lit
+  const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 21,
+    maxNativeZoom: 18,
+    attribution: 'Tiles &copy; Esri'
+  });
+
+  const mapaEstandard = L.layerGroup([esriHillshade, cartoLight]).addTo(map);
+
+  const baseMaps = {
+    "Estàndard": mapaEstandard,
+    "Satèl·lit": esriSat
+  };
+
+  L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
 }
 
 function setupButtonListeners() {
@@ -80,6 +95,53 @@ function setupButtonListeners() {
   const btnNovaRuta = document.getElementById('boto-nova-ruta');
   if (btnNovaRuta) {
     btnNovaRuta.addEventListener('click', () => obrirCreacioRuta());
+  }
+
+  const selectMode = document.getElementById('select-mode-transport');
+  if (selectMode) {
+    selectMode.addEventListener('change', (e) => {
+      const nouMode = e.target.value;
+
+      const currentState = state.get();
+      state.setMetadata({
+        ...currentState.metadata,
+        modeTransport: nouMode
+      });
+
+      if (currentState.rutaActual) {
+        const ruta = currentState.rutaActual;
+        
+        if (ruta.type === 'FeatureCollection' && Array.isArray(ruta.features)) {
+          ruta.features.forEach(f => {
+            if (!f.properties) f.properties = {};
+            if (f.geometry && f.geometry.type === 'LineString') {
+              f.properties.category = nouMode;
+              f.properties.mode = nouMode;
+            }
+          });
+          if (!ruta.properties) ruta.properties = {};
+          ruta.properties.mode = nouMode;
+          ruta.properties.category = nouMode;
+        } else if (ruta.type === 'Feature') {
+          if (!ruta.properties) ruta.properties = {};
+          ruta.properties.category = nouMode;
+          ruta.properties.mode = nouMode;
+        }
+        
+        state.setRutaActual(ruta);
+      }
+
+      actualitzarCapesMapa();
+    });
+  }
+
+  const btnVerificar = document.getElementById('boto-verificar-ruta') || 
+                       document.getElementById('boto-guardar');
+  if (btnVerificar) {
+    btnVerificar.addEventListener('click', (e) => {
+      e.preventDefault();
+      processarVerificacioRuta();
+    });
   }
 
   const btnPublicar = document.getElementById('boto-publicar-github');
@@ -95,20 +157,6 @@ function setupButtonListeners() {
     });
   }
 
-  const btnDesfer = document.getElementById('btn-desfer');
-  if (btnDesfer) {
-    btnDesfer.addEventListener('click', () => {
-      if (state.undo()) {
-        mostrarCapesVerificacio();
-        actualitzarLlistaPuntsUI();
-        actualitzarPanellBloquejosUI();
-        notificarUsuari("S'ha desfet l'últim canvi", "info");
-      } else {
-        notificarUsuari("No hi ha més canvis per desfer", "warning");
-      }
-    });
-  }
-
   const btnLupa = document.getElementById('boto-lupa');
   if (btnLupa) {
     let lupaActiva = false;
@@ -120,6 +168,90 @@ function setupButtonListeners() {
   }
 }
 
+export async function processarVerificacioRuta() {
+  const currentState = state.get();
+  const filename = currentState.nomFitxer;
+
+  if (!filename) {
+    notificarUsuari('No hi ha cap fitxer pendent seleccionat per verificar', 'warning');
+    return;
+  }
+
+  const nomInput = document.getElementById('nom-ruta')?.value;
+  const dataInput = document.getElementById('data-ruta')?.value;
+  const modeInput = document.getElementById('select-mode-transport')?.value;
+
+  const payload = {
+    type: "Feature",
+    geometry: currentState.rutaActual?.geometry || {
+      type: "LineString",
+      coordinates: currentState.rawCoords || []
+    },
+    properties: {
+      id: currentState.rutaActualId || filename.replace(/\.gpx$/i, ''),
+      name: nomInput,
+      gpx_filename: filename,
+      category: modeInput,
+      date: dataInput,
+      stations: currentState.llistaPunts || []
+    }
+  };
+
+  try {
+    notificarUsuari('Verificant i arxivant la ruta...', 'info');
+
+    const res = await fetch('/api/verificar_ruta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+
+    if (!res.ok || result.status === 'error') {
+      throw new Error(result.message || 'Error en verificar la ruta');
+    }
+
+    notificarUsuari('🎉 Ruta verificada correctament!', 'success');
+
+    // Actualitzem l'estat local sense recarregar la pàgina
+    await actualitzarLlistaPendentsUI();
+    const pendentsRes = await api.getPendents();
+    const pendents = Array.isArray(pendentsRes) ? pendentsRes : (pendentsRes.pendents || pendentsRes.files || []);
+
+    const selectElem = document.getElementById('select-gpx') || 
+                       document.getElementById('select-fitxer-pendent') || 
+                       document.getElementById('select-pendents') ||
+                       document.getElementById('select-fitxers-pendents');
+
+    if (pendents.length > 0) {
+      if (selectElem) selectElem.value = pendents[0];
+      await carregarRutaPendent(pendents[0]);
+    } else {
+      netegarCapesRuta();
+      netejarRutesGlobals();
+      netejarFormulariUI();
+      if (selectElem) selectElem.innerHTML = '<option value="">(Cap fitxer pendent)</option>';
+      notificarUsuari('Totes les rutes han estat verificades!', 'info');
+    }
+
+  } catch (err) {
+    console.error('[Verificacio Error]', err);
+    notificarUsuari(`Error en verificar la ruta: ${err.message}`, 'danger');
+  }
+}
+
+function netejarFormulariUI() {
+  const elNom = document.getElementById('nom-ruta');
+  if (elNom) elNom.value = '';
+  const elData = document.getElementById('data-ruta');
+  if (elData) elData.value = '';
+  state.setNomFitxer(null);
+  state.setRutaActual(null);
+  state.setRawCoords([]);
+  state.setLlistaPunts([]);
+}
+
 export async function carregarRutaPendent(filename) {
   if (!filename) return;
 
@@ -128,17 +260,11 @@ export async function carregarRutaPendent(filename) {
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
     const dadaPendent = await res.json();
+    const props = dadaPendent.properties || dadaPendent;
 
-    const coords = dadaPendent.coords || 
-                   dadaPendent.geometria || 
-                   dadaPendent.coordenades || 
-                   dadaPendent.segments || 
-                   dadaPendent.points || [];
-
-    const meta = dadaPendent.metadata || {};
-    const nomFinal = dadaPendent.nom_ruta || dadaPendent.nom || meta.nom || meta.name || filename.replace(/\.gpx$/i, '');
-    const dataFinal = dadaPendent.data_ruta || dadaPendent.data || meta.data || meta.date || '';
-    const modeFinal = dadaPendent.mode_transport || dadaPendent.mode || meta.mode || meta.category || 'train';
+    const nomFinal = props.name || props.nom || props.nom_ruta || filename.replace(/\.gpx$/i, '');
+    const dataFinal = props.date || props.data || props.data_ruta || '';
+    const modeFinal = props.category || props.mode || props.mode_transport || 'train';
 
     const elNom = document.getElementById('nom-ruta');
     if (elNom) elNom.value = nomFinal;
@@ -149,15 +275,30 @@ export async function carregarRutaPendent(filename) {
     const elMode = document.getElementById('select-mode-transport');
     if (elMode) elMode.value = modeFinal;
 
+    state.setNomFitxer(props.gpx_filename || filename);
+    state.setMetadata({
+      nomRuta: nomFinal,
+      dataRuta: dataFinal,
+      modeTransport: modeFinal
+    });
+
+    if (dadaPendent.type === 'Feature' || dadaPendent.type === 'FeatureCollection') {
+      state.setRutaActual(dadaPendent);
+    } else {
+      const coords = dadaPendent.coords || dadaPendent.geometria || dadaPendent.coordenades || dadaPendent.segments || dadaPendent.points || [];
+      state.setRawCoords(coords);
+    }
+
     let punts = [];
-    if (Array.isArray(dadaPendent.estacions) && dadaPendent.estacions.length > 0) {
-      punts = dadaPendent.estacions.map((est, idx) => {
-        const rawCoords = Array.isArray(est.coords) ? est.coords : [est.lat, est.lng];
+    const rawStations = props.stations || props.estacions || dadaPendent.estacions || [];
+    if (Array.isArray(rawStations) && rawStations.length > 0) {
+      punts = rawStations.map((est, idx) => {
+        const rawCoords = Array.isArray(est.coords) ? est.coords : [est.lat ?? est.latitud, est.lng ?? est.lon ?? est.longitud];
         return {
           id: 'est_' + Date.now() + idx,
           nom: est.nom || est.name || `Punt ${idx + 1}`,
-          lat: est.lat ?? rawCoords[0],
-          lng: est.lng ?? rawCoords[1],
+          lat: est.lat ?? est.latitud ?? rawCoords[0],
+          lng: est.lng ?? est.lon ?? est.longitud ?? rawCoords[1],
           coords: rawCoords,
           tipus: 'estacio',
           actiu: true
@@ -165,26 +306,11 @@ export async function carregarRutaPendent(filename) {
       });
     }
 
-    state.setRutaActualId(dadaPendent.gpx_filename || filename);
-    state.setRawCoords(coords);
     state.setLlistaPunts(punts);
-    state.setMetadata({
-      nomRuta: nomFinal,
-      dataRuta: dataFinal,
-      modeTransport: modeFinal
-    });
-
-    if (dadaPendent.vies_bloquejades && Array.isArray(dadaPendent.vies_bloquejades)) {
-      dadaPendent.vies_bloquejades.forEach((v) => state.toggleViaBloquejada(v));
-    }
-
-    const mapContainer = document.getElementById('map-container');
-    if (mapContainer) mapContainer.dataset.filename = filename;
 
     netejarRutesGlobals();
-    mostrarCapesVerificacio();
+    actualitzarCapesMapa();
     actualitzarLlistaPuntsUI();
-    actualitzarPanellBloquejosUI();
     state.markClean();
 
     if (map) map.invalidateSize();
@@ -221,36 +347,48 @@ window.toggleModeMapa = async function (forcarEstat = null) {
     if (iconaBoto) iconaBoto.innerText = '✅';
     if (textBoto) textBoto.innerText = 'Verificació';
 
-    amagarCapesEdicio();
+    netegarCapesRuta();
 
     try {
       notificarUsuari('Carregant totes les rutes del mapa...', 'info');
       const res = await api.getRoutes();
-      llistaRutesGlobals = Array.isArray(res) ? res : (res.routes || res.rutes || []);
+      llistaRutesGlobals = Array.isArray(res) ? res : (res.features || res.routes || res.rutes || []);
       state.setGlobalRoutes(llistaRutesGlobals);
-      dibuixarRutesGlobalsFiltredes();
+      dibuixarRutesGlobalsFiltredes(true);
     } catch (err) {
       notificarUsuari(`Error en carregar el mapa: ${err.message}`, 'danger');
     }
   } else {
+    // Retornar al mode verificació sense recarregar el navegador
+    if (sidebar) sidebar.classList.remove('hidden');
+    if (mapContainer) {
+      mapContainer.classList.remove('lg:col-span-4');
+      mapContainer.classList.add('lg:col-span-3');
+    }
+    if (panellFiltres) panellFiltres.classList.add('hidden');
+    if (btnNovaRuta) btnNovaRuta.classList.remove('hidden');
+    if (btnPublicar) btnPublicar.classList.add('hidden');
+
+    if (btnMapa) btnMapa.classList.remove('actiu');
+    if (iconaBoto) iconaBoto.innerText = '🗺️';
+    if (textBoto) textBoto.innerText = 'Mode Mapa';
+
+    netejarRutesGlobals();
+
     const selectElem = document.getElementById('select-gpx') || 
                        document.getElementById('select-fitxer-pendent') || 
                        document.getElementById('select-pendents') ||
                        document.getElementById('select-fitxers-pendents');
 
-    const mapContainer = document.getElementById('map-container');
-    const fitxerDesti = (selectElem && selectElem.value) || 
-                        (mapContainer && mapContainer.dataset.filename);
-
-    if (fitxerDesti) {
-      window.location.href = `/carregar_pendent/${encodeURIComponent(fitxerDesti)}`;
+    if (selectElem && selectElem.value) {
+      await carregarRutaPendent(selectElem.value);
     } else {
-      window.location.href = '/';
+      await carregarDadesInicials();
     }
   }
 };
 
-function dibuixarRutesGlobalsFiltredes() {
+function dibuixarRutesGlobalsFiltredes(ajustarBounds = true) {
   const filtresCheckboxes = document.querySelectorAll('.filtre-categoria:checked');
   const filtresActius = Array.from(filtresCheckboxes).map((c) => c.value.toLowerCase());
 
@@ -261,28 +399,40 @@ function dibuixarRutesGlobalsFiltredes() {
       await actualitzarLlistaPendentsUI();
 
       const res = await api.getRoutes();
-      llistaRutesGlobals = Array.isArray(res) ? res : (res.routes || res.rutes || []);
+      llistaRutesGlobals = Array.isArray(res) ? res : (res.features || res.routes || res.rutes || []);
       state.setGlobalRoutes(llistaRutesGlobals);
-      dibuixarRutesGlobalsFiltredes();
+
+      // Mantenim el zoom i posició actuals de l'usuari
+      dibuixarRutesGlobalsFiltredes(false);
 
       notificarUsuari('Ruta desverificada i retornada a pendents', 'success');
     } catch (err) {
       console.error('Error en desverificar ruta:', err);
       notificarUsuari(`Error en desverificar la ruta: ${err.message}`, 'danger');
     }
-  });
+  }, ajustarBounds);
 }
 
 function setupFiltresListeners() {
   const checkboxes = document.querySelectorAll('.filtre-categoria');
   checkboxes.forEach((cb) => {
     cb.addEventListener('change', () => {
-      if (esModeMapa) dibuixarRutesGlobalsFiltredes();
+      if (esModeMapa) dibuixarRutesGlobalsFiltredes(false);
     });
   });
 }
 
 async function carregarDadesInicials() {
+  // 1. Llegim la llista real de pendents
+  let llistaPendentsReals = [];
+  try {
+    const res = await api.getPendents();
+    llistaPendentsReals = Array.isArray(res) ? res : (res.pendents || res.files || []);
+  } catch (err) {
+    console.warn('[Init] Error consultant /api/pendents:', err);
+  }
+
+  // 2. Omplim el desplegable
   await actualitzarLlistaPendentsUI();
 
   const selectElem = document.getElementById('select-gpx') || 
@@ -292,64 +442,32 @@ async function carregarDadesInicials() {
 
   if (selectElem && !selectElem.dataset.listenerAdded) {
     selectElem.dataset.listenerAdded = 'true';
-    selectElem.addEventListener('change', (e) => {
+    // Canvi asíncron del fitxer sense recàrrega de pàgina
+    selectElem.addEventListener('change', async (e) => {
       if (e.target.value) {
-        window.location.href = `/carregar_pendent/${encodeURIComponent(e.target.value)}`;
+        await carregarRutaPendent(e.target.value);
       }
     });
   }
 
-  const mapContainer = document.getElementById('map-container');
-  const filename = mapContainer ? mapContainer.dataset.filename : null;
-  const routeIdParam = new URLSearchParams(window.location.search).get('route_id');
-
-  if (filename) {
-    await carregarRutaPendent(filename);
-  } else if (selectElem && selectElem.value) {
-    await carregarRutaPendent(selectElem.value);
-  } else if (routeIdParam) {
-    try {
-      const res = await api.getRoutes();
-      const rutes = Array.isArray(res) ? res : (res.routes || res.rutes || []);
-      const rutaActual = rutes.find((r) => String(r.id) === String(routeIdParam));
-
-      if (rutaActual) {
-        state.setRutaActualId(rutaActual.id);
-        const coords = rutaActual.coords || rutaActual.coordenades || rutaActual.segments || [];
-        const punts = rutaActual.punts || rutaActual.punts_de_pas || [];
-        state.setRawCoords(coords);
-        state.setLlistaPunts(punts);
-        mostrarCapesVerificacio();
-      }
-    } catch (err) {
-      console.error('Error carregant ruta via API getRoutes:', err);
-    }
+  // 3. Carreguem el primer fitxer disponible real
+  if (llistaPendentsReals.length > 0) {
+    const primerFitxer = llistaPendentsReals[0];
+    if (selectElem) selectElem.value = primerFitxer;
+    await carregarRutaPendent(primerFitxer);
+  } else {
+    netegarCapesRuta();
+    netejarRutesGlobals();
+    netejarFormulariUI();
   }
 
-  mostrarCapesVerificacio();
+  actualitzarCapesMapa();
   actualitzarLlistaPuntsUI();
-  actualitzarPanellBloquejosUI();
   state.markClean();
 
   setTimeout(() => {
     if (map) map.invalidateSize();
   }, 200);
-}
-
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      e.preventDefault();
-      if (state.undo()) {
-        mostrarCapesVerificacio();
-        actualitzarLlistaPuntsUI();
-        actualitzarPanellBloquejosUI();
-        notificarUsuari("S'ha desfet l'últim canvi", "info");
-      } else {
-        notificarUsuari('No hi ha més canvis per desfer', 'warning');
-      }
-    }
-  });
 }
 
 window.obrirCreacioRuta = obrirCreacioRuta;

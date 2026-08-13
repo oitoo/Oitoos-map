@@ -1,163 +1,160 @@
 /**
  * static/js/state.js
- * Gestió de l'estat global de Map Studio i historial de canvis (Undo) en format GeoJSON RFC 7946.
+ * Gestió de l'estat centralitzat i font única de la veritat per a Map Studio.
+ * Model de dades immutable i de només lectura/verificació en format GeoJSON RFC 7946.
  */
 
 class StateManager {
   constructor() {
-    this.undoStack = [];
-    this.maxUndoDepth = 25;
-    this.resetState();
+    this.reset();
   }
 
   /**
-   * Restableix l'estat inicial de l'editor en estructures GeoJSON[cite: 12, 15].
+   * Restableix l'estat inicial del panell de control.
    */
-  resetState() {
+  reset() {
     this.state = {
-      currentRoute: {
-        type: "FeatureCollection",
-        features: []
-      },
-      globalRoutes: [], // Llista de FeatureCollections GeoJSON[cite: 12, 15]
-      rawCoords: [],
-      llistaPunts: [],
-      viesBloquejades: [],
-      switchesManuals: {},
-      detallsPendent: [],
-      rutaActualId: null,
-      nomRuta: '',
-      dataRuta: '',
-      modeTransport: 'walk',
-      isDirty: false
+      rutaActual: null,        // FeatureCollection GeoJSON carregada (o null)
+      nomFitxer: '',           // Nom del fitxer actual (ex: "tren_r1.gpx")
+      estatCirculacio: null,   // 'pendent' | 'draft' | 'verificat'
+      carregant: false,        // Flag de bloqueig UI durant operacions asíncrones
+      globalRoutes: [],        // Llista de FeatureCollections GeoJSON publicades
+      rawCoords: [],           // Coordenades originals [lat, lng]
+      llistaPunts: [],         // Waypoints / Estacions
+      metadata: {
+        nomRuta: '',
+        dataRuta: '',
+        modeTransport: 'train'
+      }
     };
-    this.undoStack = [];
   }
 
+  /**
+   * Retorna una còpia profunda immutabilitzada de l'estat actual per evitar mutacions accidentals.
+   */
   get() {
     return JSON.parse(JSON.stringify(this.state));
   }
 
-  pushSnapshot() {
-    if (this.undoStack.length >= this.maxUndoDepth) {
-      this.undoStack.shift();
-    }
-    this.undoStack.push(JSON.stringify(this.state));
+  /**
+   * Comprova si la FeatureCollection GeoJSON actual és vàlida segons l'estàndard RFC 7946.
+   */
+  esGeoJSONValid(fc = this.state.rutaActual) {
+    if (!fc || typeof fc !== 'object') return false;
+    if (fc.type !== 'FeatureCollection') return false;
+    if (!Array.isArray(fc.features) || fc.features.length === 0) return false;
+    
+    return fc.features.some(f => f && f.geometry && Array.isArray(f.geometry.coordinates));
   }
 
-  undo() {
-    if (this.undoStack.length === 0) return false;
-    const previousState = this.undoStack.pop();
-    this.state = JSON.parse(previousState);
+  /**
+   * Validació de transició d'estat: Determina si la ruta actual es pot verificar.
+   */
+  potVerificar() {
+    if (this.state.carregant) return false;
+    if (!this.state.nomFitxer) return false;
+    return this.esGeoJSONValid();
+  }
+
+  /**
+   * Validació de transició d'estat: Determina si es pot publicar a GitHub Pages.
+   */
+  potPublicar() {
+    if (this.state.carregant) return false;
     return true;
   }
 
-  /**
-   * Fixa la ruta actual com a FeatureCollection GeoJSON estàndard[cite: 12, 15].
-   */
-  setCurrentRoute(featureCollection) {
-    this.pushSnapshot();
-    if (featureCollection && featureCollection.type === 'FeatureCollection') {
-      this.state.currentRoute = featureCollection;
-    } else {
-      this.state.currentRoute = {
-        type: "FeatureCollection",
-        features: featureCollection ? [featureCollection] : []
-      };
-    }
-    this.state.isDirty = true;
+  setCarregant(carregant) {
+    this.state.carregant = Boolean(carregant);
   }
 
-  /**
-   * Fixa les rutes globals com a matriu de GeoJSON FeatureCollections[cite: 12, 15].
-   */
-  setGlobalRoutes(routes) {
-    this.pushSnapshot();
-    this.state.globalRoutes = Array.isArray(routes) ? routes : [routes];
+  setNomFitxer(nomFitxer) {
+    this.state.nomFitxer = nomFitxer || '';
+  }
+
+  // Àlies per mantenir la compatibilitat amb la resta de mòduls
+  setRutaActualId(id) {
+    this.setNomFitxer(id);
+  }
+
+  setEstatCirculacio(estat) {
+    const estatsValids = ['pendent', 'draft', 'verificat', null];
+    if (estatsValids.includes(estat)) {
+      this.state.estatCirculacio = estat;
+    }
+  }
+
+  setRutaActual(featureCollection) {
+    if (featureCollection && featureCollection.type === 'FeatureCollection') {
+      this.state.rutaActual = featureCollection;
+    } else if (featureCollection && featureCollection.type === 'Feature') {
+      this.state.rutaActual = {
+        type: 'FeatureCollection',
+        features: [featureCollection]
+      };
+    } else {
+      this.state.rutaActual = null;
+    }
   }
 
   setRawCoords(coords) {
-    this.pushSnapshot();
-    this.state.rawCoords = coords;
+    this.state.rawCoords = Array.isArray(coords) ? coords : [];
     
-    // Converteix coordenades [lat, lng] a GeoJSON [lon, lat]
-    const geojsonCoords = coords.map(c => [c[1], c[0]]);
-    this.state.currentRoute = {
-      type: "FeatureCollection",
-      features: [
-        {
-          type: "Feature",
-          geometry: {
-            type: "LineString",
-            coordinates: geojsonCoords
-          },
-          properties: {
-            nom: this.state.nomRuta,
-            date: this.state.dataRuta,
-            category: this.state.modeTransport
-          }
+    if (this.state.rawCoords.length > 0) {
+      // Si el primer punt conté la latitud com a segon element (format GeoJSON estàndard [lng, lat]),
+      // es preserva sense invertir.
+      const geojsonCoords = this.state.rawCoords.map(c => {
+        if (Array.isArray(c) && c.length >= 2) {
+          return [Number(c[0]), Number(c[1])];
         }
-      ]
-    };
-    this.state.isDirty = true;
-  }
+        return c;
+      });
 
-  setLlistaPunts(punts) {
-    this.pushSnapshot();
-    this.state.llistaPunts = punts;
-    this.state.isDirty = true;
-  }
-
-  eliminarPunt(index) {
-    if (index >= 0 && index < this.state.llistaPunts.length) {
-      this.pushSnapshot();
-      this.state.llistaPunts.splice(index, 1);
-      this.state.isDirty = true;
-    }
-  }
-
-  toggleViaBloquejada(viaId) {
-    this.pushSnapshot();
-    const index = this.state.viesBloquejades.indexOf(viaId);
-    if (index === -1) {
-      this.state.viesBloquejades.push(viaId);
-    } else {
-      this.state.viesBloquejades.splice(index, 1);
-    }
-    this.state.isDirty = true;
-  }
-
-  setSwitchManual(switchId, posicio) {
-    this.pushSnapshot();
-    this.state.switchesManuals[switchId] = posicio;
-    this.state.isDirty = true;
-  }
-
-  setDetallsPendent(detalls) {
-    this.state.detallsPendent = detalls;
-  }
-
-  setRutaActualId(id) {
-    this.state.rutaActualId = id;
-  }
-
-  setMetadata({ nomRuta, dataRuta, modeTransport }) {
-    if (nomRuta !== undefined) this.state.nomRuta = nomRuta;
-    if (dataRuta !== undefined) this.state.dataRuta = dataRuta;
-    if (modeTransport !== undefined) this.state.modeTransport = modeTransport;
-
-    if (this.state.currentRoute && this.state.currentRoute.features.length > 0) {
-      this.state.currentRoute.features[0].properties = {
-        ...this.state.currentRoute.features[0].properties,
-        nom: this.state.nomRuta,
-        date: this.state.dataRuta,
-        category: this.state.modeTransport
+      this.state.rutaActual = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: geojsonCoords
+            },
+            properties: {
+              nom: this.state.metadata.nomRuta,
+              date: this.state.metadata.dataRuta,
+              category: this.state.metadata.modeTransport
+            }
+          }
+        ]
       };
     }
   }
 
+  setLlistaPunts(punts) {
+    this.state.llistaPunts = Array.isArray(punts) ? punts : [];
+  }
+
+  setMetadata({ nomRuta, dataRuta, modeTransport }) {
+    if (nomRuta !== undefined) this.state.metadata.nomRuta = nomRuta;
+    if (dataRuta !== undefined) this.state.metadata.dataRuta = dataRuta;
+    if (modeTransport !== undefined) this.state.metadata.modeTransport = modeTransport;
+
+    if (this.state.rutaActual && this.state.rutaActual.features?.length > 0) {
+      this.state.rutaActual.features[0].properties = {
+        ...this.state.rutaActual.features[0].properties,
+        nom: this.state.metadata.nomRuta,
+        date: this.state.metadata.dataRuta,
+        category: this.state.metadata.modeTransport
+      };
+    }
+  }
+
+  setGlobalRoutes(routes) {
+    this.state.globalRoutes = Array.isArray(routes) ? routes : [routes];
+  }
+
   markClean() {
-    this.state.isDirty = false;
+    // Es manté per compatibilitat d'interfície
   }
 }
 

@@ -1,11 +1,26 @@
 /**
  * static/js/ui_modals.js
  * Interfície d'usuari, gestió de modals, pestanyes, panells laterals i accions de la interfície.
+ * Protegit contra injeccions XSS mitjançant manipulació segura del DOM.
  */
 
 import { state } from './state.js';
 import * as api from './api.js';
-import { actualitzarCapesMapa, mostrarCapesVerificacio } from './map_layers.js';
+import { actualitzarCapesMapa } from './map_layers.js';
+import { getCategoryColor } from './utils.js';
+
+/**
+ * Mapa d'àlies per normalitzar noms de categories de la interfície local.
+ */
+const CATEGORY_MAP = {
+  walk: 'walk', caminant: 'walk', 'a_peu': 'walk', peu: 'walk',
+  cycle: 'cycle', bicicleta: 'cycle', bici: 'cycle',
+  bus: 'bus', autobus: 'bus',
+  car: 'car', land: 'car', cotxe: 'car', cotxe_privat: 'car', coche: 'car',
+  train: 'train', tren: 'train', ferrocarril: 'train',
+  boat: 'boat', barca: 'boat', vaixell: 'boat',
+  plane: 'plane', avio: 'plane'
+};
 
 /**
  * Inicialitza els esdeveniments de la interfície d'usuari.
@@ -20,10 +35,109 @@ export function initUI() {
   setupPublishListener();
   setupFilterListeners();
   setupMetadataInputs();
+  setupToolbarListeners();
+  
+  // 🎨 Sincronitzem dinàmicament els indicadors de la llegenda amb COLOR_PALETTE
+  actualitzarColorsLlegendaUI();
 }
 
 /**
- * Refresca el selector/desplegable de fitxers pendents al DOM
+ * Pinta dinàmicament els indicadors de la llegenda i filtres amb els colors oficials de utils.js
+ */
+export function actualitzarColorsLlegendaUI() {
+  // 1. Selector de badges/indicadors del panell de filtres del mapa local
+  const itemsLlegenda = document.querySelectorAll('#panell-filtres-mapa label, .filtre-categoria-wrapper, #filters label');
+  
+  itemsLlegenda.forEach((item) => {
+    const input = item.querySelector('input[type="checkbox"]');
+    const dot = item.querySelector('.color-dot, .w-3, .h-3, .badge-color, span[style*="background"], span.rounded-full');
+    
+    if (input && dot) {
+      const rawCat = (input.value || '').toLowerCase().trim();
+      const cat = CATEGORY_MAP[rawCat] || rawCat;
+      const color = getCategoryColor(cat);
+
+      dot.style.backgroundColor = color;
+      dot.style.borderColor = color;
+    }
+  });
+
+  // 2. Elements amb atribut data-category o data-category-color
+  document.querySelectorAll('[data-category-color], [data-category]').forEach((el) => {
+    const rawCat = (el.getAttribute('data-category-color') || el.getAttribute('data-category') || '').toLowerCase().trim();
+    const cat = CATEGORY_MAP[rawCat] || rawCat;
+    const color = getCategoryColor(cat);
+    
+    el.style.backgroundColor = color;
+    el.style.borderColor = color;
+  });
+}
+
+/**
+ * Configura els escoltadors de la barra d'eines principal (Botonera d'Acció Directa)
+ */
+function setupToolbarListeners() {
+  // ➕ Nova Ruta
+  const btnsNovaRuta = document.querySelectorAll('#btn-nova-ruta, #boto-nova-ruta, #btn-crear-ruta');
+  btnsNovaRuta.forEach((btn) => {
+    btn.addEventListener('click', () => obrirCreacioRuta());
+  });
+
+  // 🔍 Lupa / Inspecció de coordenades
+  const btnsInspeccio = document.querySelectorAll('#btn-inspeccio, #btn-lupa, #btn-inspeccionar-coords');
+  btnsInspeccio.forEach((btn) => {
+    btn.addEventListener('click', () => toggleModeInspeccio());
+  });
+
+  // ↩️ Desverificar Ruta
+  const btnsDesverificar = document.querySelectorAll('#btn-desverificar, #btn-desverificar-ruta');
+  btnsDesverificar.forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await executarDesverificacio();
+    });
+  });
+}
+
+/**
+ * Alterna el mode d'inspecció de coordenades sobre el mapa.
+ */
+function toggleModeInspeccio() {
+  const mapContainer = document.getElementById('map') || document.getElementById('map-container');
+  if (mapContainer) {
+    const actiu = mapContainer.classList.toggle('inspection-mode-active');
+    if (actiu) {
+      notificarUsuari('🔍 Mode d\'inspecció activat. Fes clic al mapa per verificar coordenades.', 'info');
+    } else {
+      notificarUsuari('🔍 Mode d\'inspecció desactivat.', 'info');
+    }
+  }
+}
+
+/**
+ * Executa l'acció de desverificar la ruta actual.
+ */
+async function executarDesverificacio() {
+  const currentState = state.get();
+  const routeId = currentState.nomFitxer || currentState.rutaActualId;
+
+  if (!routeId) {
+    notificarUsuari('No hi ha cap ruta seleccionada per desverificar.', 'danger');
+    return;
+  }
+
+  try {
+    notificarUsuari('S\'està desverificant la ruta...', 'info');
+    const res = await api.desverificarRuta(routeId);
+    notificarUsuari(res.message || 'Ruta retornada a pendents correctament.', 'success');
+    await actualitzarLlistaPendentsUI();
+    setTimeout(() => window.location.reload(), 1200);
+  } catch (err) {
+    notificarUsuari(err.message, 'danger');
+  }
+}
+
+/**
+ * Refresca el selector/desplegable de fitxers pendents al DOM de manera segura (Anti-XSS)
  */
 export async function actualitzarLlistaPendentsUI() {
   const selectElem = document.getElementById('select-gpx') ||
@@ -53,10 +167,13 @@ export async function actualitzarLlistaPendentsUI() {
       }
     });
 
-    selectElem.innerHTML = '';
+    selectElem.replaceChildren();
 
     if (pendents.length === 0) {
-      selectElem.innerHTML = '<option value="">Cap fitxer pendent</option>';
+      const optBuida = document.createElement('option');
+      optBuida.value = '';
+      optBuida.textContent = 'Cap fitxer pendent';
+      selectElem.appendChild(optBuida);
       return;
     }
 
@@ -301,8 +418,7 @@ function setupModalTabs() {
 }
 
 /**
- * Alterna entre la Secció de Verificació i la Secció d'Edició al panell lateral,
- * actualitzant les capes del mapa segons el mode actiu.
+ * Alterna entre la Secció de Verificació i la Secció d'Edició al panell lateral.
  */
 function setupSectionToggleListeners() {
   const btnModeEdicio = document.getElementById('btn-mode-edicio');
@@ -314,7 +430,7 @@ function setupSectionToggleListeners() {
     btnModeEdicio.addEventListener('click', () => {
       seccioVerificacio.classList.add('hidden');
       seccioEdicio.classList.remove('hidden');
-      actualitzarCapesMapa(); // Mostra eines i capes d'edició (switches, controls)
+      actualitzarCapesMapa();
     });
   }
 
@@ -322,7 +438,7 @@ function setupSectionToggleListeners() {
     btnModeVerificacio.addEventListener('click', () => {
       seccioEdicio.classList.add('hidden');
       seccioVerificacio.classList.remove('hidden');
-      mostrarCapesVerificacio(); // Neteja elements d'edició i deixa només traçat + estacions
+      actualitzarCapesMapa();
     });
   }
 }
@@ -359,17 +475,20 @@ export async function copiarPrompt(textPrompt) {
 }
 
 /**
- * Actualitza la llista de punts de pas i estacions a la barra lateral.
+ * Actualitza la llista de punts de pas i estacions a la barra lateral de manera segura (Anti-XSS).
  */
 export function actualitzarLlistaPuntsUI() {
   const container = document.getElementById('llista-punts-container');
   if (!container) return;
 
   const currentData = state.get();
-  container.innerHTML = '';
+  container.replaceChildren();
 
   if (!currentData.llistaPunts || currentData.llistaPunts.length === 0) {
-    container.innerHTML = '<p class="text-gray-400 italic">Cap punt registrat</p>';
+    const pBuida = document.createElement('p');
+    pBuida.className = 'text-gray-400 italic';
+    pBuida.textContent = 'Cap punt registrat';
+    container.appendChild(pBuida);
     return;
   }
 
@@ -379,37 +498,52 @@ export function actualitzarLlistaPuntsUI() {
   currentData.llistaPunts.forEach((punt, idx) => {
     const li = document.createElement('li');
     li.className = 'flex items-center justify-between bg-gray-800 p-2 rounded border border-gray-700 text-xs text-gray-200';
-    li.innerHTML = `
-      <span class="truncate pr-2">${idx + 1}. ${punt.nom || 'Punt sense nom'}</span>
-      <button class="btn-eliminar-punt text-red-400 hover:text-red-300 font-bold px-1.5 py-0.5 rounded bg-gray-700/50 hover:bg-gray-700 cursor-pointer" data-index="${idx}">✕</button>
-    `;
-    ul.appendChild(li);
-  });
 
-  container.appendChild(ul);
+    const spanNom = document.createElement('span');
+    spanNom.className = 'truncate pr-2';
+    spanNom.textContent = `${idx + 1}. ${punt.nom || 'Punt sense nom'}`;
 
-  container.querySelectorAll('.btn-eliminar-punt').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      const idx = parseInt(e.currentTarget.dataset.index, 10);
-      state.eliminarPunt(idx);
+    const btnEliminar = document.createElement('button');
+    btnEliminar.className = 'btn-eliminar-punt text-red-400 hover:text-red-300 font-bold px-1.5 py-0.5 rounded bg-gray-700/50 hover:bg-gray-700 cursor-pointer';
+    btnEliminar.dataset.index = idx;
+    btnEliminar.textContent = '✕';
+
+    btnEliminar.addEventListener('click', (e) => {
+      const i = parseInt(e.currentTarget.dataset.index, 10);
+      state.eliminarPunt(i);
       actualitzarCapesMapa();
       actualitzarLlistaPuntsUI();
       notificarUsuari('Punt eliminat de la seqüència', 'info');
     });
+
+    li.appendChild(spanNom);
+    li.appendChild(btnEliminar);
+    ul.appendChild(li);
   });
+
+  container.appendChild(ul);
 }
 
 /**
- * Actualitza el panell de bloquejos de via.
+ * Actualitza el panell de bloquejos de via de manera segura.
  */
 export function actualitzarPanellBloquejosUI() {
   const container = document.getElementById('panell-bloquejos');
   if (!container) return;
 
   const { viesBloquejades } = state.get();
-  container.innerHTML = `
-    <p class="text-xs"><strong>Vies bloquejades:</strong> ${viesBloquejades.length}</p>
-  `;
+  container.replaceChildren();
+
+  const p = document.createElement('p');
+  p.className = 'text-xs';
+
+  const strong = document.createElement('strong');
+  strong.textContent = 'Vies bloquejades: ';
+
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(String(viesBloquejades ? viesBloquejades.length : 0)));
+
+  container.appendChild(p);
 }
 
 /**
@@ -504,13 +638,11 @@ function setupSidebarListeners() {
       try {
         const currentState = state.get();
         const payload = {
-          gpx_filename: currentState.rutaActualId,
-          nom_ruta: document.getElementById('nom-ruta')?.value || currentState.nomRuta,
-          data_ruta: document.getElementById('data-ruta')?.value || currentState.dataRuta,
-          mode_transport: document.getElementById('select-mode-transport')?.value || currentState.modeTransport,
-          estacions: currentState.llistaPunts,
-          vies_bloquejades: currentState.viesBloquejades,
-          switches_manuals: currentState.switchesManuals
+          gpx_filename: currentState.nomFitxer || currentState.rutaActualId,
+          nom_ruta: document.getElementById('nom-ruta')?.value || currentState.metadata?.nomRuta,
+          data_ruta: document.getElementById('data-ruta')?.value || currentState.metadata?.dataRuta,
+          mode_transport: document.getElementById('select-mode-transport')?.value || currentState.metadata?.modeTransport,
+          estacions: currentState.llistaPunts
         };
 
         await api.desarEdicio(payload);
@@ -529,13 +661,11 @@ function setupSidebarListeners() {
       try {
         const currentState = state.get();
         const payload = {
-          gpx_filename: currentState.rutaActualId,
-          nom_ruta: document.getElementById('nom-ruta')?.value || currentState.nomRuta,
-          data_ruta: document.getElementById('data-ruta')?.value || currentState.dataRuta,
-          mode_transport: document.getElementById('select-mode-transport')?.value || currentState.modeTransport,
-          punts: currentState.llistaPunts,
-          vies_bloquejades: currentState.viesBloquejades,
-          switches_manuals: currentState.switchesManuals
+          gpx_filename: currentState.nomFitxer || currentState.rutaActualId,
+          nom_ruta: document.getElementById('nom-ruta')?.value || currentState.metadata?.nomRuta,
+          data_ruta: document.getElementById('data-ruta')?.value || currentState.metadata?.dataRuta,
+          mode_transport: document.getElementById('select-mode-transport')?.value || currentState.metadata?.modeTransport,
+          punts: currentState.llistaPunts
         };
 
         await api.verificarRuta(payload);
@@ -549,15 +679,15 @@ function setupSidebarListeners() {
 }
 
 /**
- * Configura el botó per publicar a GitHub.
+ * Configura el botó per publicar a GitHub Pages.
  */
 function setupPublishListener() {
-  const btnPublish = document.getElementById('boto-publicar-github');
+  const btnPublish = document.getElementById('boto-publicar-github') || document.getElementById('btn-publicar');
   if (btnPublish) {
     btnPublish.addEventListener('click', async () => {
       const btnText = document.getElementById('text-boto-publicar');
-      const textOriginal = btnText ? btnText.innerText : '';
-      if (btnText) btnText.innerText = 'Publicant...';
+      const textOriginal = btnText ? btnText.textContent : '';
+      if (btnText) btnText.textContent = 'Publicant...';
 
       try {
         const res = await api.publishRuta();
@@ -565,18 +695,18 @@ function setupPublishListener() {
       } catch (err) {
         notificarUsuari(`Error en publicar: ${err.message}`, 'danger');
       } finally {
-        if (btnText) btnText.innerText = textOriginal;
+        if (btnText) btnText.textContent = textOriginal;
       }
     });
   }
 }
 
 function setupFilterListeners() {
-  
+  // Espai per a filtres addicionals de la interfície
 }
 
 /**
- * Mostra un missatge de notificació flotant a la interfície.
+ * Mostra un missatge de notificació flotant a la interfície de manera segura.
  */
 export function notificarUsuari(missatge, tipus = 'info') {
   const notificationArea = document.getElementById('notification-area') || createNotificationArea();
@@ -587,7 +717,7 @@ export function notificarUsuari(missatge, tipus = 'info') {
   if (tipus === 'danger') bgClass = 'bg-red-600';
 
   toast.className = `${bgClass} text-white font-medium px-4 py-3 rounded-lg shadow-xl text-xs flex items-center justify-between transition-all duration-300 transform translate-y-0 opacity-100 mb-2`;
-  toast.innerText = missatge;
+  toast.textContent = missatge;
 
   notificationArea.appendChild(toast);
   setTimeout(() => {

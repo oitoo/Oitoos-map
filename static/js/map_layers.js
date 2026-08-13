@@ -1,14 +1,14 @@
 /**
  * static/js/map_layers.js
- * Manipulació de capes visuals de Leaflet mitjançant l'API nativa L.geoJSON().
+ * Manipulació de capes visuals de Leaflet 100% Read-Only mitjançant L.geoJSON().
  */
 
 import { state } from './state.js';
+import { getCategoryColor } from './utils.js';
 
 let mapInstance = null;
 let activeGeoJsonLayer = null;
 let stationMarkersGroup = null;
-let switchMarkersGroup = null;
 let globalRoutesGroup = null;
 let magnifierControl = null;
 
@@ -22,24 +22,15 @@ const CATEGORY_MAP = {
   plane: 'plane', avio: 'plane'
 };
 
-const CATEGORY_COLORS = {
-  walk: '#22c55e',
-  cycle: '#f97316',
-  bus: '#f59e0b',
-  car: '#ef4444',
-  train: '#d946ef',
-  boat: '#0ea5e9',
-  plane: '#6366f1'
-};
-
 export function initMapLayers(map) {
   mapInstance = map;
   
   activeGeoJsonLayer = L.geoJSON(null, {
     style: (feature) => {
-      const cat = CATEGORY_MAP[feature?.properties?.category] || 'car';
+      const rawCat = (feature?.properties?.category || 'car').toLowerCase();
+      const cat = CATEGORY_MAP[rawCat] || rawCat;
       return {
-        color: CATEGORY_COLORS[cat] || '#209cee',
+        color: getCategoryColor(cat),
         weight: 5,
         opacity: 0.85
       };
@@ -47,44 +38,33 @@ export function initMapLayers(map) {
   }).addTo(mapInstance);
 
   stationMarkersGroup = L.layerGroup().addTo(mapInstance);
-  switchMarkersGroup = L.layerGroup().addTo(mapInstance);
-  
-  // Utilitzar L.featureGroup() per al càlcul automàtic de límits (getBounds())[cite: 12, 13]
   globalRoutesGroup = L.featureGroup().addTo(mapInstance);
 }
 
-export function actualitzarCapesMapa(isEdicio = false) {
+export function actualitzarCapesMapa() {
   if (!mapInstance) return;
 
   const currentState = state.get();
-  renderGeoJsonState(currentState.currentRoute);
+  renderGeoJsonState(currentState.rutaActual);
   renderStationMarkers(currentState.llistaPunts);
-
-  if (isEdicio) {
-    renderSwitchMarkers(currentState.switchesManuals, currentState.rawCoords);
-  } else {
-    if (switchMarkersGroup) switchMarkersGroup.clearLayers();
-  }
 }
 
-export function mostrarCapesVerificacio() {
-  if (switchMarkersGroup) switchMarkersGroup.clearLayers();
-  actualitzarCapesMapa(false);
-}
-
-export function amagarCapesEdicio() {
+export function netegarCapesRuta() {
   if (activeGeoJsonLayer) activeGeoJsonLayer.clearLayers();
   if (stationMarkersGroup) stationMarkersGroup.clearLayers();
-  if (switchMarkersGroup) switchMarkersGroup.clearLayers();
 }
 
 /**
- * Carrega i dibuixa FeatureCollections GeoJSON usant L.geoJSON() natiu[cite: 12, 13].
+ * Carrega i dibuixa FeatureCollections GeoJSON en mode de només lectura.
+ * @param {Array|Object} rutesGeoJSON 
+ * @param {Array} filtresActius 
+ * @param {Function} onDesverificarCallback 
+ * @param {boolean} ajustarBounds - Si és true, enquadra la vista Leaflet a totes les rutes.
  */
-export function renderGlobalRoutes(rutesGeoJSON, filtresActius = [], onDesverificarCallback) {
+export function renderGlobalRoutes(rutesGeoJSON, filtresActius = [], onDesverificarCallback, ajustarBounds = true) {
   if (!globalRoutesGroup || !mapInstance) return;
   
-  amagarCapesEdicio();
+  netegarCapesRuta();
   globalRoutesGroup.clearLayers();
 
   if (!rutesGeoJSON) return;
@@ -105,7 +85,7 @@ export function renderGlobalRoutes(rutesGeoJSON, filtresActius = [], onDesverifi
         const rawCat = (feature.properties?.category || fc.properties?.categoria || 'car').toLowerCase();
         const cat = CATEGORY_MAP[rawCat] || rawCat;
         return {
-          color: CATEGORY_COLORS[cat] || '#209cee',
+          color: getCategoryColor(cat),
           weight: 4,
           opacity: 0.85
         };
@@ -139,11 +119,13 @@ export function renderGlobalRoutes(rutesGeoJSON, filtresActius = [], onDesverifi
     globalRoutesGroup.addLayer(layer);
   });
 
-  try {
-    const bounds = globalRoutesGroup.getBounds();
-    if (bounds.isValid()) mapInstance.fitBounds(bounds, { padding: [30, 30] });
-  } catch (e) {
-    console.warn('[MapLayers] Error ajustant bounds de rutes globals:', e);
+  if (ajustarBounds) {
+    try {
+      const bounds = globalRoutesGroup.getBounds();
+      if (bounds.isValid()) mapInstance.fitBounds(bounds, { padding: [30, 30] });
+    } catch (e) {
+      console.warn('[MapLayers] Error ajustant bounds de rutes globals:', e);
+    }
   }
 }
 
@@ -172,8 +154,8 @@ function renderStationMarkers(punts) {
   if (!punts || !Array.isArray(punts)) return;
 
   punts.forEach((punt, index) => {
-    let lat = punt.lat;
-    let lng = punt.lng;
+    let lat = punt.lat ?? punt.latitude;
+    let lng = punt.lng ?? punt.lon ?? punt.longitude;
 
     if ((lat == null || lng == null) && Array.isArray(punt.coords) && punt.coords.length >= 2) {
       lat = Number(punt.coords[0]);
@@ -189,44 +171,10 @@ function renderStationMarkers(punts) {
       iconAnchor: [12, 12]
     });
 
-    const marker = L.marker([lat, lng], { icon, draggable: true });
+    const marker = L.marker([lat, lng], { icon, draggable: false });
     marker.bindTooltip(punt.nom || `Punt ${index + 1}`);
 
-    marker.on('dragend', (e) => {
-      const newPos = e.target.getLatLng();
-      const updatedPunts = [...state.get().llistaPunts];
-      updatedPunts[index] = {
-        ...updatedPunts[index],
-        lat: newPos.lat,
-        lng: newPos.lng,
-        coords: [newPos.lat, newPos.lng]
-      };
-      state.setLlistaPunts(updatedPunts);
-    });
-
     stationMarkersGroup.addLayer(marker);
-  });
-}
-
-function renderSwitchMarkers(switchesManuals, coords) {
-  switchMarkersGroup.clearLayers();
-  if (!switchesManuals || !coords || coords.length === 0) return;
-
-  Object.keys(switchesManuals).forEach((switchId) => {
-    const posicio = switchesManuals[switchId];
-    const point = coords[parseInt(switchId, 10)];
-    if (point && Array.isArray(point) && point.length >= 2) {
-      const color = posicio === 'diverted' ? '#ffdd57' : '#48c774';
-      const circle = L.circleMarker([point[0], point[1]], {
-        radius: 8,
-        fillColor: color,
-        color: '#000',
-        weight: 1,
-        fillOpacity: 0.9
-      });
-      circle.bindPopup(`Canvi de via ID: ${switchId}<br>Estat: <strong>${posicio}</strong>`);
-      switchMarkersGroup.addLayer(circle);
-    }
   });
 }
 

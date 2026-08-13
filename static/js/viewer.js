@@ -24,14 +24,15 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
 let activeFeatureLayer = null;
 const loadedGeoJsonLayers = {};
 
+// Sincronitzat amb la paleta unificada oficial de COLOR_PALETTE
 const CATEGORY_STYLES = {
-    walk:  { color: "#16a34a", weight: 3, dashArray: null },
-    cycle: { color: "#ea580c", weight: 3, dashArray: null },
-    bus:   { color: "#d97706", weight: 3, dashArray: null },
-    car:   { color: "#dc2626", weight: 3, dashArray: null },
-    train: { color: "#c026d3", weight: 3, dashArray: null },
-    boat:  { color: "#0284c7", weight: 3, dashArray: "10, 8" },
-    plane: { color: "#4f46e5", weight: 3, dashArray: "16, 10" }
+    walk:  { color: "#16a34a", weight: 3, dashArray: null },       // Verd
+    cycle: { color: "#dc2626", weight: 3, dashArray: null },       // Vermell
+    bus:   { color: "#eab308", weight: 3, dashArray: null },       // Groc daurat
+    car:   { color: "#f97316", weight: 3, dashArray: null },       // Taronja
+    train: { color: "#c026d3", weight: 3, dashArray: null },       // Purpura / Magenta
+    boat:  { color: "#0284c7", weight: 3, dashArray: "10, 8" },    // Blau cel
+    plane: { color: "#4f46e5", weight: 3, dashArray: "16, 10" }    // Índigo
 };
 
 const categoryState = {
@@ -83,7 +84,7 @@ function applyStyles() {
         const geoJsonGroup = loadedGeoJsonLayers[category];
         if (!map.hasLayer(geoJsonGroup)) return;
 
-        const baseStyle = CATEGORY_STYLES[category] || { color: "#3388ff", weight: 3 };
+        const baseStyle = CATEGORY_STYLES[category] || { color: "#5C5F66", weight: 3 };
 
         geoJsonGroup.eachLayer(layer => {
             if (!activeFeatureLayer) {
@@ -125,9 +126,8 @@ function loadCategory(category) {
             return response.json();
         })
         .then(featureCollection => {
-            const styleConfig = CATEGORY_STYLES[category] || { color: "#95a5a6", weight: 3 };
+            const styleConfig = CATEGORY_STYLES[category] || { color: "#5C5F66", weight: 3 };
 
-            // Renderització nativa mitjançant L.geoJSON
             const geoJsonLayer = L.geoJSON(featureCollection, {
                 style: () => ({
                     color: styleConfig.color,

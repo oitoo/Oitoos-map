@@ -8,9 +8,9 @@
  */
 export const COLOR_PALETTE = {
     walk: '#16a34a',    // Verd
-    cycle: '#f97316',   // Taronja
-    bus: '#d97706',     // Àmbar
-    land: '#dc2626',    // Vermell (Cotxe / Motor)
+    cycle: '#dc2626',   // Vermell
+    bus: '#eab308',     // Groc daurat
+    car: '#f97316',     // Taronja
     train: '#c026d3',   // Purpura / Magenta
     boat: '#0284c7',    // Blau cel
     plane: '#4f46e5',   // Índigo
