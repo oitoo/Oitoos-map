@@ -16,7 +16,7 @@ tools/
 tests/
 MEMORIA_ESTRATEGICA.md
 estat_projecte.md
-estructura_clean*.txt
+estructura_del_projecte*.txt
 check_coherence.py
 *.pdf
 *.zip
