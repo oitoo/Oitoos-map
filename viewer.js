@@ -2,6 +2,9 @@
  * GEOROUTE VIEWER (Visor Públic Natiu GeoJSON RFC 7946)
  */
 
+// ⚡ Renderitzador d'alt rendiment basat en Canvas
+const canvasRenderer = L.canvas({ padding: 0.5 });
+
 const map = L.map("map", {
     center: [41.72, 1.82],
     zoom: 8,
@@ -72,7 +75,6 @@ function updateInfo(props) {
 
     if (!infoEl) return;
 
-    // Si no hi ha cap ruta seleccionada (props és null), amaguem el requadre
     if (!props) {
         infoEl.style.display = "none";
         return;
@@ -132,6 +134,7 @@ function loadCategory(category) {
             const styleConfig = CATEGORY_STYLES[category] || { color: "#5C5F66", weight: 3 };
 
             const geoJsonLayer = L.geoJSON(featureCollection, {
+                renderer: canvasRenderer, // 👈 Força el renderitzat per Canvas
                 style: () => ({
                     color: styleConfig.color,
                     weight: styleConfig.weight,
@@ -173,9 +176,6 @@ function loadCategory(category) {
         });
 }
 
-/**
- * Pinta dinàmicament la llegenda HTML a partir de CATEGORY_STYLES
- */
 function applyLegendColors() {
     document.querySelectorAll("#filters label").forEach(label => {
         const input = label.querySelector("input[type='checkbox']");
@@ -200,10 +200,8 @@ map.on("click", () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. Apliquem els colors centralitzats a la llegenda
     applyLegendColors();
 
-    // 2. Configurem els filtres i esdeveniments
     document.querySelectorAll("#filters input[type='checkbox']").forEach(cb => {
         const category = cb.value === 'land' ? 'car' : cb.value;
         categoryState[category] = cb.checked;

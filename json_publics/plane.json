@@ -4,11 +4,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "4cfe4106-7fc7-4932-b6f7-a8fd234978b9",
+        "id": "2bb8fdca-2694-46ba-9c0b-3d5ea310d187",
         "name": "Bcn Bilbo",
         "gpx_filename": "Bcn_Bilbo.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -354,11 +354,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "cdac0459-2aa6-4cf6-874a-35eab1f174f6",
+        "id": "c9270b17-cf00-4d13-adf3-d9cfb8ca0fd7",
         "name": "Bcn Bratislava",
         "gpx_filename": "Bcn_Bratislava.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -1164,11 +1164,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "4458f24e-0880-4de1-9a0e-906724a5fbff",
+        "id": "556e1fd5-3fc6-41f7-9bec-449e74ff307f",
         "name": "Bcn Budapest",
         "gpx_filename": "Bcn_Budapest.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -1842,11 +1842,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "2c5651c2-883e-49bf-a4a4-8429c7aaa5bf",
+        "id": "0de3f395-edcf-43eb-9733-326ac6604c22",
         "name": "Bcn Dusseldorf",
         "gpx_filename": "Bcn_Dusseldorf.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -2640,11 +2640,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "e48f1c93-ff63-4eac-ac81-9a5550d874fc",
+        "id": "47e0c42b-63c4-456c-9073-d4c3ec0abf68",
         "name": "Bcn Frankfurt",
         "gpx_filename": "Bcn_Frankfurt.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -3318,11 +3318,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "de7984e0-c75b-4edf-b934-0c40ea6a992a",
+        "id": "72b8012c-682d-402d-b415-e836485fa077",
         "name": "Bcn Gatwich",
         "gpx_filename": "Bcn_Gatwich.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -3880,11 +3880,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "d8a28c15-a739-4ec4-b436-d5494ad214a2",
+        "id": "5e1d2ef5-348c-4416-ba93-811556d898e6",
         "name": "Bcn Goteburg",
         "gpx_filename": "Bcn_Goteburg.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -4630,11 +4630,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "e45ba10b-3c45-4d5c-ab93-73fbc7a96241",
+        "id": "66425b2d-9af6-4fb0-b82c-be4d9f55838d",
         "name": "Bcn Heathrow",
         "gpx_filename": "Bcn_Heathrow.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -5244,11 +5244,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "1649f890-8ad0-42ae-9b43-dc6643b142b4",
+        "id": "fc10e414-231f-45ce-b913-25c219de131d",
         "name": "Bcn Istanbul",
         "gpx_filename": "Bcn_Istanbul.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -6130,11 +6130,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "00a06fe1-9eec-40e7-bac4-4d32b1b1226a",
+        "id": "9cdcb809-eb16-486a-b38a-9e1f0d621888",
         "name": "Bcn Luton",
         "gpx_filename": "Bcn_Luton.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -6780,11 +6780,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "366b372c-0330-47c6-ad25-5b9d596191a1",
+        "id": "84fb73fe-bf8c-44d5-9966-d232ce073324",
         "name": "Bcn Madrit",
         "gpx_filename": "Bcn_Madrit.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -7118,11 +7118,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "73dd6799-8463-46fd-8146-5bceea4d9a04",
+        "id": "27ef0f61-03a6-4fc5-8680-dd5c7772ddc0",
         "name": "Bcn Munchen",
         "gpx_filename": "Bcn_Munchen.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -7716,11 +7716,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "2f92387c-c156-4d1d-8b23-da75f0900ed7",
+        "id": "361427e3-3618-4507-962e-02e6da5333cd",
         "name": "Bcn Palma",
         "gpx_filename": "Bcn_Palma.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -7902,11 +7902,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "471d4272-440d-40a3-b0a3-3b6d0eb1a2fb",
+        "id": "fcd1362e-d6e7-4dfb-9007-5cd959b1793e",
         "name": "Bcn Southend",
         "gpx_filename": "Bcn_Southend.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -8528,11 +8528,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "6e5c9212-8769-4bb0-a17e-6bafa3882677",
+        "id": "68cf608d-a963-43a8-a746-1ff10fe45e83",
         "name": "Bcn Stansted",
         "gpx_filename": "Bcn_Stansted.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -9106,11 +9106,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "de6f3c08-3b32-492b-abd4-feed3a1c3913",
+        "id": "e73e9e7a-3fed-4382-afc9-758962ae9f10",
         "name": "Bcn Ternerife",
         "gpx_filename": "Bcn_Ternerife.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -9944,11 +9944,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "d1137cd1-3d9b-413c-a194-ebeff87732b2",
+        "id": "f41b48b8-99aa-4a03-bb6b-9a1050bbbee5",
         "name": "Cancun Madrit",
         "gpx_filename": "Cancun_Madrit.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -11746,11 +11746,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "60dac853-b10e-4e3d-a496-d1d48b95ac22",
+        "id": "336f4008-ea23-40a1-b3b9-ded69a15b341",
         "name": "Cuzco Lima",
         "gpx_filename": "Cuzco_Lima.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -11968,11 +11968,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "6adbb964-779b-4e24-aba7-bd7e64765449",
+        "id": "8bdc83d0-b0cb-406a-bc89-2a402a1d205c",
         "name": "Doha Heathrow",
         "gpx_filename": "Doha_Heathrow.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -13662,11 +13662,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "8c34ba14-0624-487c-a0e9-58c46af7b4e6",
+        "id": "579180c2-271f-45a7-9669-d8839408ea82",
         "name": "Frankfurt Nairobi",
         "gpx_filename": "Frankfurt_Nairobi.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -14740,11 +14740,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "89bd7185-4604-4cfb-a81a-90498fa50f65",
+        "id": "9d6798ad-e7b3-408e-8680-79b96a8e4649",
         "name": "Heathrow Bahrain",
         "gpx_filename": "Heathrow_Bahrain.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -16354,11 +16354,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "1b2cce03-bef6-446b-a478-2f3f594d7499",
+        "id": "523eb4a5-3dcf-4855-a8a2-eb529f0e9f89",
         "name": "Heathrow Madrit",
         "gpx_filename": "Heathrow_Madrit.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -16848,11 +16848,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "2ac6c39f-f804-4c1f-9278-8be047b54d1d",
+        "id": "ac414c94-6afc-47b2-8709-0308e251ef57",
         "name": "Hong Kong Singapore",
         "gpx_filename": "Hong Kong_Singapore.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -17454,11 +17454,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "b1a00b1a-d31a-4245-b3ae-88bfbc6d9d51",
+        "id": "940cd07f-7c38-4b60-99eb-d2e78480373f",
         "name": "Katmandu New Delhi",
         "gpx_filename": "Katmandu_New Delhi.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -17852,11 +17852,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "7cdd69be-076b-4ee9-8f15-6a8ff84273f3",
+        "id": "4687cc91-eb7b-4dd2-a2c7-c371ae102605",
         "name": "Lima Arequipa",
         "gpx_filename": "Lima_Arequipa.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -17982,11 +17982,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "ffb04d02-3fe9-4a99-98ef-c42ed746ae1d",
+        "id": "3da81192-d4f7-42cf-816c-f6b01ca6d320",
         "name": "Lima Iquitos",
         "gpx_filename": "Lima_Iquitos.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -18156,69 +18156,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "b7bf64c0-b80e-4206-8e73-d2a8f4aea383",
-        "name": "London - Moscow - Beijing",
-        "gpx_filename": "London - Moscow - Beijing.gpx",
-        "category": "plane",
-        "date": "2026-08-14",
-        "stations": [
-          {
-            "nom": "LHR",
-            "lat": 51.47,
-            "lon": -0.4543
-          },
-          {
-            "nom": "SVO",
-            "lat": 55.9726,
-            "lon": 37.4146
-          },
-          {
-            "nom": "PEK",
-            "lat": 40.0799,
-            "lon": 116.5871
-          }
-        ],
-        "blocked_ways": [],
-        "custom_switches": []
-      },
-      "geometry": {
-        "type": "LineString",
-        "coordinates": [
-          [
-            37.4146,
-            55.9726
-          ],
-          [
-            60.6057,
-            56.8389
-          ],
-          [
-            82.9357,
-            55.0084
-          ],
-          [
-            107.5846,
-            51.8292
-          ],
-          [
-            106.9178,
-            47.9184
-          ],
-          [
-            116.5871,
-            40.0799
-          ]
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "adfc480a-013e-464e-89bd-ea0fe0dd95b8",
+        "id": "4a1036d0-024a-453c-a2d2-d1406126336b",
         "name": "Madrit Lima",
         "gpx_filename": "Madrit_Lima.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -19184,11 +19126,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "56618aed-1725-42b2-b038-7af0bd49f57b",
+        "id": "49cd02c9-089c-41ba-80cf-98fe6934463c",
         "name": "Madrit Rio De Janeiro",
         "gpx_filename": "Madrit_Rio de Janeiro.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -20406,11 +20348,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "dc5ffb87-57dc-44e3-8018-f325a1e247c5",
+        "id": "9f23e675-86fa-4b9a-b96a-d400e1684329",
         "name": "Mumbai Heathrow",
         "gpx_filename": "Mumbai_Heathrow.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -22172,11 +22114,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "98c869c2-72d6-4df5-83fa-02a18441d356",
+        "id": "30cb9ec0-14cf-495b-87e1-e26a3789d01f",
         "name": "Munchen New Delhi",
         "gpx_filename": "Munchen_New Delhi.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -23974,11 +23916,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "7070dfe5-5e1d-4b67-ac7e-77609c113fb2",
+        "id": "58941e7b-014a-4515-a4ac-33df7b0fa039",
         "name": "Newcastle Luton",
         "gpx_filename": "Newcastle_Luton.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -24288,11 +24230,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "e9c19405-a95c-4bff-8a5d-ac9cddc5adb9",
+        "id": "2cee5220-c5bd-4db7-b23e-cd435a518dbd",
         "name": "Shangai Seoul",
         "gpx_filename": "Shangai_Seoul.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -24714,11 +24656,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "aedf8f2c-9acb-41c0-a9a4-164b9dde6a18",
+        "id": "d3a41c8f-89c1-4145-b688-68a771e2defc",
         "name": "Stansted Glasgow",
         "gpx_filename": "Stansted_Glasgow.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -25112,11 +25054,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "9bf7b6ac-166f-4390-b64a-156d1b8ea83a",
+        "id": "2da59bfc-eaf5-401d-8296-b1d0bb1c813a",
         "name": "Stansted Istanbul",
         "gpx_filename": "Stansted_Istanbul.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -26274,11 +26216,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "db6b250c-8fda-4c28-a202-804058da5287",
+        "id": "151e1009-8f19-4a27-be17-201ed86a4273",
         "name": "Stansted Krakow",
         "gpx_filename": "Stansted_Krakow.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
@@ -26972,11 +26914,11 @@
     {
       "type": "Feature",
       "properties": {
-        "id": "89e8151a-8e9b-48cd-8807-1b9127a61e45",
+        "id": "f6f7e7d4-1a5e-476c-9c2e-7dfd807590d4",
         "name": "Turin Bcn",
         "gpx_filename": "Turin_Bcn.gpx",
         "category": "plane",
-        "date": "2026-08-14",
+        "date": "2026-08-17",
         "stations": [],
         "blocked_ways": [],
         "custom_switches": []
