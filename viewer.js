@@ -3,12 +3,12 @@
 
     // Configuració única per a estils i etiquetes (SSOT)
     const STYLES_CONFIG = {
-        walk:  { label: "Caminant", color: "#16a34a", weight: 3, dashArray: null },
-        bike: { label: "Ciclisme", color: "#dc2626", weight: 3, dashArray: null },
-        bus:   { label: "Autobús", color: "#eab308", weight: 3, dashArray: null },
-        car:   { label: "Cotxe",    color: "#f97316", weight: 3, dashArray: null },
-        train: { label: "Tren",     color: "#c026d3", weight: 3, dashArray: null },
-        boat:  { label: "Barca",    color: "#0284c7", weight: 3, dashArray: "10, 8" },
+        walk:   { label: "Caminant", color: "#16a34a", weight: 3, dashArray: null },
+        bike:   { label: "Ciclisme", color: "#dc2626", weight: 3, dashArray: null },
+        bus:    { label: "Autobús", color: "#eab308", weight: 3, dashArray: null },
+        car:    { label: "Cotxe",    color: "#f97316", weight: 3, dashArray: null },
+        train:  { label: "Tren",     color: "#c026d3", weight: 3, dashArray: null },
+        boat:   { label: "Barca",    color: "#0284c7", weight: 3, dashArray: "10, 8" },
         flight: { label: "Avió",     color: "#4f46e5", weight: 3, dashArray: "16, 10" }
     };
 
@@ -41,6 +41,7 @@
         initMap() {
             this.map = L.map("map", { center: [41.72, 1.82], zoom: 8 });
 
+            // Capa base original (Esri + CARTO)
             L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 21, maxNativeZoom: 16, attribution: 'Esri'
             }).addTo(this.map);
@@ -52,6 +53,11 @@
             this.map.on("click", () => {
                 this.activeFeatureLayer = null;
                 this.updateInfo(null);
+                this.applyStyles();
+            });
+
+            // Recalcula els estils automàticament en fer zoom
+            this.map.on("zoomend", () => {
                 this.applyStyles();
             });
         }
@@ -113,12 +119,32 @@
             return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString("ca-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
         }
 
+        // Càlcul dinàmic de gruix i puntejat segons el nivell de zoom
+        getScaledStyle(category, baseConfig) {
+            const zoom = this.map ? this.map.getZoom() : 8;
+
+            // 1. Gruix dinàmic (1px en visió mundial/zoom <= 2 fins a ~4.5px en zoom proper)
+            let weight = Math.max(1, 1 + (zoom - 2) * 0.28);
+            if (weight > 4.5) weight = 4.5;
+
+            // 2. Escalat del puntejat (dashArray) per a avions i barques
+            let dashArray = baseConfig.dashArray;
+            if (dashArray) {
+                const scale = Math.max(0.3, Math.min(1.2, zoom / 10));
+                const parts = baseConfig.dashArray.split(",").map(v => parseFloat(v.trim()));
+                dashArray = `${Math.max(2, Math.round(parts[0] * scale))}, ${Math.max(2, Math.round(parts[1] * scale))}`;
+            }
+
+            return { weight, dashArray };
+        }
+
         applyStyles() {
             Object.keys(this.loadedGeoJsonLayers).forEach(category => {
                 const geoJsonGroup = this.loadedGeoJsonLayers[category];
                 if (!this.map.hasLayer(geoJsonGroup)) return;
 
-                const base = STYLES_CONFIG[category] || { color: "#5C5F66", weight: 3 };
+                const base = STYLES_CONFIG[category] || { color: "#5C5F66", weight: 3, dashArray: null };
+                const scaled = this.getScaledStyle(category, base);
 
                 geoJsonGroup.eachLayer(layer => {
                     const isSelected = layer === this.activeFeatureLayer;
@@ -126,8 +152,8 @@
 
                     layer.setStyle({
                         color: base.color,
-                        weight: isSelected ? base.weight + 2 : (isNoneSelected ? base.weight : Math.max(1.5, base.weight - 1)),
-                        dashArray: base.dashArray,
+                        weight: isSelected ? scaled.weight + 2 : (isNoneSelected ? scaled.weight : Math.max(1, scaled.weight - 1)),
+                        dashArray: scaled.dashArray,
                         opacity: isSelected ? 1 : (isNoneSelected ? 0.85 : 0.25)
                     });
                 });
@@ -159,7 +185,15 @@
                 const styleConfig = STYLES_CONFIG[category] || { color: "#5C5F66", weight: 3 };
                 const geoJsonLayer = L.geoJSON(featureCollection, {
                     renderer: this.canvasRenderer,
-                    style: () => ({ color: styleConfig.color, weight: styleConfig.weight, dashArray: styleConfig.dashArray, opacity: 0.85 }),
+                    style: () => {
+                        const scaled = this.getScaledStyle(category, styleConfig);
+                        return {
+                            color: styleConfig.color,
+                            weight: scaled.weight,
+                            dashArray: scaled.dashArray,
+                            opacity: 0.85
+                        };
+                    },
                     onEachFeature: (feature, layer) => {
                         layer.on("click", (e) => {
                             L.DomEvent.stopPropagation(e);
