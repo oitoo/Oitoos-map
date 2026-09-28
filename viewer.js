@@ -4,12 +4,12 @@
     // Configuració única per a estils i etiquetes (SSOT)
     const STYLES_CONFIG = {
         walk:  { label: "Caminant", color: "#16a34a", weight: 3, dashArray: null },
-        cycle: { label: "Ciclisme", color: "#dc2626", weight: 3, dashArray: null },
+        bike: { label: "Ciclisme", color: "#dc2626", weight: 3, dashArray: null },
         bus:   { label: "Autobús", color: "#eab308", weight: 3, dashArray: null },
         car:   { label: "Cotxe",    color: "#f97316", weight: 3, dashArray: null },
         train: { label: "Tren",     color: "#c026d3", weight: 3, dashArray: null },
         boat:  { label: "Barca",    color: "#0284c7", weight: 3, dashArray: "10, 8" },
-        plane: { label: "Avió",     color: "#4f46e5", weight: 3, dashArray: "16, 10" }
+        flight: { label: "Avió",     color: "#4f46e5", weight: 3, dashArray: "16, 10" }
     };
 
     class GeoRouteViewer {
