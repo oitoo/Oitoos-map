@@ -110,7 +110,9 @@
             }
             this.dom.info.style.display = "block";
             if (this.dom.title) this.dom.title.innerText = props.nom || props.name || "Ruta sense nom";
-            if (this.dom.meta) this.dom.meta.innerText = `${props.category ? props.category.toUpperCase() : ''} • ${this.formatDate(props.date)}`;
+    
+            // Ara només mostrem la data (sense la categoria / mode de transport)
+            if (this.dom.meta) this.dom.meta.innerText = this.formatDate(props.date);
         }
 
         formatDate(dateStr) {
